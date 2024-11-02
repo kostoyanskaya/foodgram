@@ -1,59 +1,16 @@
 from rest_framework import serializers
-from users.models import User, Follow
-from recipes.models import Tag, Recipe, Ingredient
+from users.models import Follow
+from recipes.models import Tag, Recipe, Ingredient, ShoppingCart
 from django.core.files.base import ContentFile
 import base64
 import os
 from drf_extra_fields.fields import Base64ImageField
+from django.contrib.auth import get_user_model
+from djoser.serializers import UserCreateSerializer, UserSerializer
+from rest_framework.exceptions import ValidationError
 
-class FollowSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Follow
-        fields = ('user', 'author')
+User = get_user_model()
 
-class RecipeMinifiedSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Recipe
-        fields = ('id', 'name', 'cooking_time', 'image')
-
-class UserWithRecipesSerializer(serializers.ModelSerializer):
-    recipes = RecipeMinifiedSerializer(many=True, read_only=True)
-    recipes_count = serializers.IntegerField(source='recipe_set.count', read_only=True)
-    is_subscribed = serializers.SerializerMethodField()
-
-    class Meta:
-        model = User
-        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'avatar', 'is_subscribed', 'recipes', 'recipes_count')
-
-    def get_is_subscribed(self, obj):
-        request = self.context.get('request')
-        if request.user.is_authenticated:
-            return Follow.objects.filter(user=request.user, author=obj).exists()
-        return False
-
-
-class UserCreateSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-
-    class Meta:
-        model = User
-        fields = ('id', 'email', 'username', 'password')
-
-    def create(self, validated_data):
-        user = User(
-            email=validated_data['email'],
-            username=validated_data['username']
-        )
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
-
-class AvatarSerializer(serializers.ModelSerializer):
-    avatar = Base64ImageField(required=False, allow_null=True)
-
-    class Meta:
-        model = User
-        fields = ('avatar',)
 
 class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
@@ -68,6 +25,84 @@ class Base64ImageField(serializers.ImageField):
             data = file
         return super().to_internal_value(data)
 
+class UserRegistrationSerializer(UserCreateSerializer):
+    """Сериализатор для создания пользователя"""
+
+    class Meta(UserCreateSerializer.Meta):
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'password',
+        )
+        read_only_fields = ('id',)
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=False, allow_null=True)
+    """Сериализатор для получения информации о пользователе"""
+
+    class Meta:
+        model = User
+        fields = ('email', 'id', 'username', 'first_name', 'last_name', 'is_subscribed', 'avatar')
+
+class UserSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=False, allow_null=True)
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'password',
+            'is_subscribed',
+            'avatar'
+        )
+        read_only_fields = ('id',)
+
+class FollowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Follow
+        fields = ('user', 'author')
+
+class RecipeMinifiedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'cooking_time', 'image')
+
+class UserWithRecipesSerializer(serializers.ModelSerializer):
+    recipes = RecipeMinifiedSerializer(many=True, read_only=True)
+    is_subscribed = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'avatar', 'is_subscribed', 'recipes', 'recipes_count')
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if request.user.is_authenticated:
+            return Follow.objects.filter(user=request.user, author=obj).exists()
+        return False
+
+
+class UserAnotherSerializer(UserSerializer):
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'first_name', 'last_name', 'email',
+                  'is_subscribed')
+
+class AvatarSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = User
+        fields = ('avatar',)
+
+
 
 class ChangePasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(required=True)
@@ -77,12 +112,6 @@ class ChangePasswordSerializer(serializers.Serializer):
         if len(value) < 8:
             raise serializers.ValidationError("Пароль должен быть не менее 8 символов.")
         return value
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ('id', 'username', 'email', 'firstname', 'lastname', 'is_subscribed', 'avatar')
 
         
 
@@ -98,6 +127,14 @@ class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit')
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShoppingCart
+        fields = ('id', 'recipe')
+
+    def create(self, validated_data):
+        return ShoppingCart.objects.create(**validated_data)
 
 class RecipeSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(

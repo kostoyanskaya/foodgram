@@ -1,19 +1,6 @@
 from django.db import models
 from users.models import User
-
-class Follow(models.Model):
-    user = models.ForeignKey(
-        User,
-        verbose_name='Кто подписан',
-        on_delete=models.CASCADE,
-        related_name='follower'
-    )
-    author = models.ForeignKey(
-        User,
-        verbose_name='На кого подписан',
-        on_delete=models.CASCADE,
-        related_name='following'
-    )
+from django.conf import settings
 
 class Tag(models.Model):
     name = models.CharField(max_length=32, unique=True)
@@ -25,6 +12,8 @@ class Tag(models.Model):
 class Ingredient(models.Model):
     name = models.CharField(max_length=200)
     measurement_unit = models.CharField(max_length=200)
+
+
     
 class Recipe(models.Model): 
     author = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -36,6 +25,13 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name
+    
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('user', 'recipe')
     
 class Favorite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

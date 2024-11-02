@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 import re
-
+from django.core.validators import MaxLengthValidator, MinLengthValidator
 
 def validate_username(value):
     if value == 'me':
@@ -13,6 +13,8 @@ def validate_username(value):
         raise ValidationError('Username can not be with such simbols.')
 
 class User(AbstractUser):
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ('username', 'first_name', 'last_name')
     username = models.CharField(
         'Username',
         unique=True,
@@ -28,13 +30,16 @@ class User(AbstractUser):
     first_name = models.CharField(
         'first name',
         max_length=150,
-        blank=True
+        blank=False
     )
     last_name = models.CharField(
         'last name',
         max_length=150,
-        blank=True
+        blank=False
     )
+    is_subscribed = models.BooleanField(
+        'Подписка',
+        default=False)
     avatar = models.ImageField(upload_to='users/', blank=True, null=True)
 
 

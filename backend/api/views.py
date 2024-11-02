@@ -1,11 +1,10 @@
 from rest_framework import viewsets, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
-from users.models import User, Follow
-from .serializers import UserSerializer
+from users.models import Follow
 from rest_framework.response import Response
-from recipes.models import Tag, Recipe, Ingredient, Favorite
-from .serializers import TagSerializer, RecipeSerializer, IngredientSerializer, AvatarSerializer, ChangePasswordSerializer, UserWithRecipesSerializer
+from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart
+from .serializers import TagSerializer, RecipeSerializer, UserDetailSerializer, IngredientSerializer, AvatarSerializer, ChangePasswordSerializer, UserWithRecipesSerializer, ShoppingCartSerializer, UserSerializer, UserRegistrationSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from .filters import RecipeFilter, IngredientFilter
@@ -16,22 +15,15 @@ from django.core.files.base import ContentFile
 import base64
 from django.contrib.auth import update_session_auth_hash
 from rest_framework.views import APIView
-from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.pagination import LimitOffsetPagination
 
-class CustomTokenObtainView(APIView):
-    permission_classes = [AllowAny]
+from django.contrib.auth import get_user_model
 
-    def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
-        user = authenticate(email=email, password=password)
+User = get_user_model()
 
-        if user:
-            token, created = Token.objects.get_or_create(user=user)
-            return Response({'auth_token': token.key}, status=status.HTTP_200_OK)
 
-        return Response({'error': 'Неверные учетные данные!'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class CustomTokenLogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -41,33 +33,37 @@ class CustomTokenLogoutView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class CustomPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'limit'
-    max_page_size = 100
-
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [AllowAny]
+    pagination_class = LimitOffsetPagination
 
-    @action(detail=False, methods=['put'], permission_classes=[IsAuthenticated])
-    def avatar(self, request):
-        serializer = AvatarSerializer(data=request.data)
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return UserRegistrationSerializer
+        return UserDetailSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset
+
+    @action(
+        detail=False,
+        methods=['PUT'],
+        permission_classes=(IsAuthenticated,),
+        url_path='me/avatar'
+    )     
+    def update_avatar(self, request):
+        serializer = AvatarSerializer(
+            request.user,
+            data=request.data,
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # Получаем изображение и сохраняем его
-        avatar_data = serializer.validated_data.get('avatar')
-        if avatar_data:
-            format, imgstr = avatar_data.split(';base64,')  
-            ext = format.split('/')[-1]  
-            avatar_file = ContentFile(base64.b64decode(imgstr), name=f'avatar.{ext}')
-
-            # Сохраняем файл пользователя
-            user = request.user
-            user.avatar.save(f'avatar.{ext}', avatar_file)
-            user.save()
-
-        return Response({'avatar': user.avatar.url}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['delete'], permission_classes=[IsAuthenticated])
     def delete_avatar(self, request):
@@ -83,7 +79,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
         user = request.user
-        serializer = UserSerializer(user)
+        serializer = UserDetailSerializer(user)
         return Response(serializer.data)
     
     @action(detail=False, methods=['put'], permission_classes=[IsAuthenticated])
@@ -123,6 +119,7 @@ class UserViewSet(viewsets.ModelViewSet):
             following, many=True, context={'request': request}
         )
         return Response({'count': following.count(), 'results': serializer.data})
+    
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def subscribe(self, request, pk=None):
@@ -202,3 +199,48 @@ class RecipeViewSet(viewsets.ModelViewSet):
             favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({'detail': 'Рецепт не найден в избранном'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['GET'], url_path='get-link')
+    def get_link(self, request, id=None):
+        """Получаем короткую ссылку на рецепт по ID."""
+        recipe = self.get_object()  # Получаем объект рецепта
+
+        # Предположим, вы сможете использовать функцию для создания короткой ссылки
+        # Здесь используем простой пример для генерации короткой ссылки
+        # Вы можете использовать сторонние сервисы или библиотеки для создания коротких ссылок
+        short_link = f"https://foodgram.example.org/s/{recipe.id}"
+
+        return Response({'short-link': short_link}, status=status.HTTP_200_OK)
+    
+class ShoppingCartViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def download(self, request):
+        user = request.user
+        shopping_cart = ShoppingCart.objects.filter(user=user).all()
+        
+        # Здесь должна быть реализована логика для генерации файла (CSV/TXT/PDF)
+        # Например, если возвращаем CSV, формируем <code>data</code> как строку:
+
+        data = "Рецепт"  # Пример заголовков
+        for item in shopping_cart:
+            data += f"{item.recipe.name}\n"  # Предполагая, что у рецепта есть поля <code>name</code> и <code>price</code>
+
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def add(self, request, pk=None):
+        recipe = get_object_or_404(Recipe, id=pk)
+        shopping_cart, created = ShoppingCart.objects.get_or_create(user=request.user, recipe=recipe)
+
+        if created:
+            serializer = ShoppingCartSerializer(shopping_cart)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({'detail': 'Рецепт уже добавлен в список покупок'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['delete'])
+    def remove(self, request, pk=None):
+        shopping_cart = get_object_or_404(ShoppingCart, user=request.user, recipe_id=pk)
+        shopping_cart.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
