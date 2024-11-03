@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from users.models import Follow
-from recipes.models import Tag, Recipe, Ingredient, ShoppingCart
+from recipes.models import Tag, Recipe, Ingredient, ShoppingCart, Favorite, IngredientInRecipe
 from django.core.files.base import ContentFile
 import base64
 import os
@@ -10,7 +10,6 @@ from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework.exceptions import ValidationError
 
 User = get_user_model()
-
 
 class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
@@ -68,6 +67,16 @@ class FollowSerializer(serializers.ModelSerializer):
         model = Follow
         fields = ('user', 'author')
 
+class IngredientInRecipeSerializer(serializers.ModelSerializer):
+    ingredient = serializers.SlugRelatedField(
+        slug_field='name', 
+        queryset=Ingredient.objects.all()
+    )
+
+    class Meta:
+        model = IngredientInRecipe
+        fields = ('ingredient',)  # Предполагая, что есть поле `amount` в модели IngredientInRecipe
+
 class RecipeMinifiedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
@@ -92,7 +101,7 @@ class UserAnotherSerializer(UserSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'first_name', 'last_name', 'email',
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'avatar',
                   'is_subscribed')
 
 class AvatarSerializer(serializers.ModelSerializer):
@@ -101,6 +110,12 @@ class AvatarSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('avatar',)
+
+    def validate(self, attrs):
+        # Проверка наличия поля 'avatar' при запросе на обновление
+        if 'avatar' not in attrs or attrs['avatar'] is None:
+            raise ValidationError({'avatar': 'Необходимо добавить аватар.'})
+        return attrs
 
 
 
@@ -142,6 +157,9 @@ class RecipeSerializer(serializers.ModelSerializer):
         read_only=True
     )
     image = Base64ImageField()
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
+    ingredients = IngredientInRecipeSerializer(many=True)
 
     class Meta:
         model = Recipe
@@ -158,6 +176,24 @@ class RecipeSerializer(serializers.ModelSerializer):
             'ingredients'
         )
         read_only_fields = ('email', 'username', 'first_name', 'last_name')
+
+    def get_is_favorited(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Favorite.objects.filter(user=request.user, recipe=obj).exists()
+        return False
+    
+    def get_is_in_shopping_cart(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
+        return False
+    
+    def get_ingredients(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Ingredient.objects.filter(name=obj).exists()
+        return False
 
     def create(self, validated_data):
         tags = validated_data.pop('tags')

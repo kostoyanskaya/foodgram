@@ -3,7 +3,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from users.models import Follow
 from rest_framework.response import Response
-from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart
+from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart, IngredientInRecipe
 from .serializers import TagSerializer, RecipeSerializer, UserDetailSerializer, IngredientSerializer, AvatarSerializer, ChangePasswordSerializer, UserWithRecipesSerializer, ShoppingCartSerializer, UserSerializer, UserRegistrationSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -16,21 +16,11 @@ import base64
 from django.contrib.auth import update_session_auth_hash
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.pagination import LimitOffsetPagination
-
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-
-
-class CustomTokenLogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        request.user.auth_token.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -38,6 +28,7 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
     pagination_class = LimitOffsetPagination
+    http_method_names = ['get', 'post', 'put', 'delete']
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -50,30 +41,27 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
-        methods=['PUT'],
+        methods=['PUT', 'DELETE'],  # Позволяем оба метода
         permission_classes=(IsAuthenticated,),
         url_path='me/avatar'
-    )     
-    def update_avatar(self, request):
-        serializer = AvatarSerializer(
-            request.user,
-            data=request.data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-    @action(detail=False, methods=['delete'], permission_classes=[IsAuthenticated])
-    def delete_avatar(self, request):
+    )
+    def manage_avatar(self, request):
         user = request.user
-        if user.avatar:  # Если у пользователя есть аватар
-            user.avatar.delete(save=False)  # Удаляем файл
-            user.avatar = None  # Обнуляем поле аватара
-            user.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'detail': 'Аватар не найден.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if request.method == 'PUT':
+            serializer = AvatarSerializer(
+                user,
+                data=request.data,
+                context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif request.method == 'DELETE':
+            user.avatar = None  # Удаляем аватар
+            user.save()  # Сохраняем изменения
+            return Response({'detail': 'Аватар успешно удален.'}, status=status.HTTP_204_NO_CONTENT)
 
     # Ваш существующий метод `me`
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
@@ -81,28 +69,6 @@ class UserViewSet(viewsets.ModelViewSet):
         user = request.user
         serializer = UserDetailSerializer(user)
         return Response(serializer.data)
-    
-    @action(detail=False, methods=['put'], permission_classes=[IsAuthenticated])
-    def set_password(self, request):
-        user = request.user
-        serializer = ChangePasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        current_password = serializer.validated_data.get('current_password')
-        new_password = serializer.validated_data.get('new_password')
-
-        # Проверка текущего пароля
-        if not user.check_password(current_password):
-            return Response({'current_password': ['Неверный пароль.']}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Установка нового пароля
-        user.set_password(new_password)
-        user.save()
-
-        # Обновление сессии пользователя
-        update_session_auth_hash(request, user)
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def subscriptions(self, request):
@@ -148,12 +114,11 @@ class TagViewSet(viewsets.ModelViewSet):
     serializer_class = TagSerializer
     permission_classes = [AllowAny]
     http_method_names = ['get']
+    pagination_class = None
 
-    def retrieve(self, request, *args, **kwargs):
-        """Метод получения тега по ID."""
-        tag = get_object_or_404(Tag, id=kwargs['pk'])
-        serializer = self.get_serializer(tag)
-        return Response(serializer.data)
+    def get_object(self):
+        """Получаем тег по ID из параметров URL."""
+        return get_object_or_404(Tag, id=self.kwargs['pk'])
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
@@ -164,6 +129,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
+    pagination_class = None
 
 
 class RecipeViewSet(viewsets.ModelViewSet):

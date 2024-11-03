@@ -148,11 +148,8 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
-    'SERIALIZERS': {
-        'user_create': 'api.serializers.UserAnotherSerializer',
-        'current_user': 'api.serializers.UserAnotherSerializer',
-    },
+    'USER_CREATE_PASSWORD_RETYPE': True,
+    'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
 }
-
 
 DEFAULT_PAGE_SIZE = 6
