@@ -11,6 +11,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import viewsets, status
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import AnonymousUser
+from rest_framework.exceptions import PermissionDenied
 
 
 User = get_user_model()
@@ -127,15 +129,6 @@ class AvatarSerializer(serializers.ModelSerializer):
 
 
 
-class ChangePasswordSerializer(serializers.Serializer):
-    current_password = serializers.CharField(required=True)
-    new_password = serializers.CharField(required=True)
-
-    def validate_new_password(self, value):
-        if len(value) < 8:
-            raise serializers.ValidationError("Пароль должен быть не менее 8 символов.")
-        return value
-
         
 
 class TagSerializer(serializers.ModelSerializer):
@@ -185,17 +178,46 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('email', 'username', 'first_name', 'last_name')
 
+    def validate_cooking_time(self, cooking_time):
+        if cooking_time < 1:
+            raise serializers.ValidationError('Время приготовления должно быть больше нуля.')
+        return cooking_time
+
+    def validate_ingredients(self, ingredients):
+        if not ingredients:
+            raise serializers.ValidationError('Поле ingredients не должно быть пустым.')
+        
+        ingredient_ids = []
+        for ingredient in ingredients:
+            if ingredient['amount'] < 1:
+                raise serializers.ValidationError('Количество ингредиента должно быть больше 0.')
+            if ingredient['id'] in ingredient_ids:
+                raise serializers.ValidationError('Ингредиенты не должны повторяться.')
+            ingredient_ids.append(ingredient['id'])
+
+        return ingredients
+
+    def validate_tags(self, tags):
+        if not tags:
+            raise serializers.ValidationError('Поле tags не должно быть пустым.')
+
+        if len(tags) != len(set(tags)):
+            raise serializers.ValidationError('Теги не должны повторяться.')
+
+        return tags
+
     def get_is_favorited(self, obj):
         request = self.context.get('request')
-        if request:
-            return Favorite.objects.filter(user=request.user, recipe=obj).exists()
-        return False
-    
+        if isinstance(request.user, AnonymousUser):
+            return False  # Если пользователь не авторизован
+        return Favorite.objects.filter(user=request.user, recipe=obj).exists()
+
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
-        if request:
-            return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
-        return False
+        if isinstance(request.user, AnonymousUser):
+            return False  # Если пользователь не авторизован
+        return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
+
     
     def to_representation(self, instance):
         # Используем стандартное представление
@@ -209,6 +231,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         tag_ids = validated_data.pop('tags')
 
         user = self.context.get('request').user
+        if isinstance(user, AnonymousUser):
+            raise serializers.ValidationError("You must be logged in to create a recipe.")
         recipe = Recipe.objects.create(author=user, **validated_data)
 
         # Устанавливаем теги через их ID
@@ -226,8 +250,15 @@ class RecipeSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
+        if instance.author != self.context.get('request').user:
+            raise PermissionDenied("Только автор рецепта может его обновить.")
         ingredients_data = validated_data.pop('ingredients', [])
         tag_ids = validated_data.pop('tags', [])
+
+        if not ingredients_data:
+            raise serializers.ValidationError('Поле ingredients не должно быть пустым.')
+        if not tag_ids:
+            raise serializers.ValidationError('Поле tags не должно быть пустым.')
 
         # Очистка старых ингредиентов и тегов
         instance.ingredients.clear()

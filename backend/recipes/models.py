@@ -3,7 +3,7 @@ from users.models import User
 from django.conf import settings
 
 class Tag(models.Model):
-    name = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=200, unique=True)
     slug = models.SlugField(max_length=32, unique=True, blank=True, null=True)
 
     def __str__(self):
@@ -21,6 +21,7 @@ class Recipe(models.Model):
         Ingredient,
         verbose_name='Ингредиенты',
         related_name='recipes',
+        blank=False,
     )
     name = models.CharField(max_length=256)
     text = models.TextField()

@@ -4,7 +4,7 @@ from rest_framework.permissions import AllowAny
 from users.models import Follow
 from rest_framework.response import Response
 from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart, IngredientInRecipe
-from .serializers import TagSerializer, RecipeSerializer, UserDetailSerializer, IngredientSerializer, AvatarSerializer, ChangePasswordSerializer, UserWithRecipesSerializer, ShoppingCartSerializer, UserSerializer, UserRegistrationSerializer
+from .serializers import TagSerializer, RecipeSerializer, UserDetailSerializer, IngredientSerializer, AvatarSerializer, UserWithRecipesSerializer, ShoppingCartSerializer, UserSerializer, UserRegistrationSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from .filters import RecipeFilter, IngredientFilter
@@ -18,6 +18,7 @@ from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from rest_framework.pagination import LimitOffsetPagination
 from django.contrib.auth import get_user_model
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 User = get_user_model()
 
@@ -138,7 +139,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticatedOrReadOnly,)
     http_method_names = ['get', 'post', 'patch', 'delete']
     queryset = Recipe.objects.all()
     filter_backends = (DjangoFilterBackend,)
@@ -146,7 +147,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_object(self):
         """Получаем тег по ID из параметров URL."""
-        return get_object_or_404(Recipe, id=self.kwargs['id'])
+        return get_object_or_404(Recipe, id=self.kwargs['pk'])
 
 
     @action(methods=['post'], detail=True, permission_classes=[IsAuthenticated])
@@ -168,16 +169,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return Response({'detail': 'Рецепт не найден в избранном'}, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=True, methods=['GET'], url_path='get-link')
-    def get_link(self, request, id=None):
+    def get_link(self, request, pk):
         """Получаем короткую ссылку на рецепт по ID."""
-        recipe = self.get_object()  # Получаем объект рецепта
-
-        # Предположим, вы сможете использовать функцию для создания короткой ссылки
-        # Здесь используем простой пример для генерации короткой ссылки
-        # Вы можете использовать сторонние сервисы или библиотеки для создания коротких ссылок
-        short_link = f"https://foodgram.example.org/s/{recipe.id}"
-
-        return Response({'short-link': short_link}, status=status.HTTP_200_OK)
+        get_object_or_404(Recipe, id=pk)
+        return Response(
+            {'short-link': f'http://127.0.0.1:8000/recipes/{pk}'},
+            status=status.HTTP_200_OK
+        )
     
 class ShoppingCartViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
