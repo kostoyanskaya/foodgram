@@ -113,8 +113,8 @@ class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [AllowAny]
-    http_method_names = ['get']
     pagination_class = None
+    http_method_names = ['get']
 
     def get_object(self):
         """Получаем тег по ID из параметров URL."""
@@ -131,22 +131,23 @@ class IngredientViewSet(viewsets.ModelViewSet):
     filterset_class = IngredientFilter
     pagination_class = None
 
+    def get_object(self):
+        """Получаем тег по ID из параметров URL."""
+        return get_object_or_404(Ingredient, id=self.kwargs['pk'])
+
 
 class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
-    permission_classes = (IsAuthorOrReadOnly,)
+    permission_classes = (AllowAny,)
     http_method_names = ['get', 'post', 'patch', 'delete']
     queryset = Recipe.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
     def get_object(self):
-        """Получаем рецепт по ID из параметров URL."""
+        """Получаем тег по ID из параметров URL."""
         return get_object_or_404(Recipe, id=self.kwargs['id'])
 
-    def perform_create(self, serializer):
-        """Создание нового рецепта."""
-        serializer.save(author=self.request.user)
 
     @action(methods=['post'], detail=True, permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):

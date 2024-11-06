@@ -150,6 +150,11 @@ DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
     'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
+    'SERIALIZERS': {
+        'user_create': 'api.serializers.UserRegistrationSerializer',
+        'user': 'api.serializers.UserDetailSerializer',
+        'current_user': 'api.serializers.UserAnotherSerializer',
+    },
 }
 
 DEFAULT_PAGE_SIZE = 6

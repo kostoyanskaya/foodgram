@@ -17,6 +17,11 @@ class Ingredient(models.Model):
     
 class Recipe(models.Model): 
     author = models.ForeignKey(User, on_delete=models.CASCADE)
+    ingredients = models.ManyToManyField(
+        Ingredient,
+        verbose_name='Ингредиенты',
+        related_name='recipes',
+    )
     name = models.CharField(max_length=256)
     text = models.TextField()
     cooking_time = models.PositiveIntegerField()
@@ -44,8 +49,6 @@ class Favorite(models.Model):
         return f"{self.user.username} - {self.recipe.name}"
     
 class IngredientInRecipe(models.Model):
-    """Модель для связи ингредиента и рецепта."""
-
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
@@ -57,3 +60,4 @@ class IngredientInRecipe(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Ингредиент в рецепте',
     )
+    amount = models.PositiveSmallIntegerField()
