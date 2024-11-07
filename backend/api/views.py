@@ -207,36 +207,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
             {'short-link': f'http://127.0.0.1:8000/recipes/{pk}'},
             status=status.HTTP_200_OK
         )
-    
-class ShoppingCartViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'])
-    def download(self, request):
+    def download_shopping_cart(self, request):
         user = request.user
         shopping_cart = ShoppingCart.objects.filter(user=user).all()
-        
-        # Здесь должна быть реализована логика для генерации файла (CSV/TXT/PDF)
-        # Например, если возвращаем CSV, формируем <code>data</code> как строку:
 
-        data = "Рецепт"  # Пример заголовков
+        data = "Рецепт"
         for item in shopping_cart:
-            data += f"{item.recipe.name}\n"  # Предполагая, что у рецепта есть поля <code>name</code> и <code>price</code>
+            data += f"{item.recipe.name}\n"
 
         return Response(data, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['post'])
-    def add(self, request, pk=None):
+    @action(detail=True, methods=['post', 'delete'], permission_classes=[IsAuthenticated])
+    def shopping_cart(self, request, pk=None):
         recipe = get_object_or_404(Recipe, id=pk)
-        shopping_cart, created = ShoppingCart.objects.get_or_create(user=request.user, recipe=recipe)
 
-        if created:
-            serializer = ShoppingCartSerializer(shopping_cart)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response({'detail': 'Рецепт уже добавлен в список покупок'}, status=status.HTTP_400_BAD_REQUEST)
+        if request.method == 'POST':
+            shopping_cart, created = ShoppingCart.objects.get_or_create(user=request.user, recipe=recipe)
+            if created:
+                serializer = ShoppingCartSerializer(shopping_cart)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({'detail': 'Рецепт уже добавлен в список покупок'}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=True, methods=['delete'])
-    def remove(self, request, pk=None):
-        shopping_cart = get_object_or_404(ShoppingCart, user=request.user, recipe_id=pk)
-        shopping_cart.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        elif request.method == 'DELETE':
+            shopping_cart = get_object_or_404(ShoppingCart, user=request.user, recipe=recipe)
+            shopping_cart.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
