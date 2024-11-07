@@ -4,7 +4,7 @@ from rest_framework.permissions import AllowAny
 from users.models import Follow
 from rest_framework.response import Response
 from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart, IngredientInRecipe
-from .serializers import TagSerializer, RecipeSerializer, UserDetailSerializer, IngredientSerializer, AvatarSerializer, UserWithRecipesSerializer, ShoppingCartSerializer, UserSerializer, UserRegistrationSerializer
+from .serializers import TagSerializer, RecipeSerializer, UserDetailSerializer, IngredientSerializer, AvatarSerializer, UserWithRecipesSerializer, ShoppingCartSerializer, RecipeMinifiedSerializer, UserRegistrationSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from .filters import RecipeFilter, IngredientFilter
@@ -19,6 +19,7 @@ from django.contrib.auth import authenticate
 from rest_framework.pagination import LimitOffsetPagination
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from .paginations import LimitPagination 
 
 User = get_user_model()
 
@@ -28,7 +29,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
-    pagination_class = LimitOffsetPagination
+    pagination_class = LimitPagination
     http_method_names = ['get', 'post', 'put', 'delete']
 
     def get_serializer_class(self):
@@ -42,7 +43,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
-        methods=['PUT', 'DELETE'],  # Позволяем оба метода
+        methods=['PUT', 'DELETE'],
         permission_classes=(IsAuthenticated,),
         url_path='me/avatar'
     )
@@ -60,11 +61,10 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         elif request.method == 'DELETE':
-            user.avatar = None  # Удаляем аватар
-            user.save()  # Сохраняем изменения
+            user.avatar = None
+            user.save()
             return Response({'detail': 'Аватар успешно удален.'}, status=status.HTTP_204_NO_CONTENT)
-
-    # Ваш существующий метод `me`
+    
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
         user = request.user
@@ -75,18 +75,35 @@ class UserViewSet(viewsets.ModelViewSet):
     def subscriptions(self, request):
         user = request.user
         following = Follow.objects.filter(user=user).select_related('author')
-        page = self.paginate_queryset(following)
-        if page is not None:
-            serializer = UserWithRecipesSerializer(
-                page, many=True, context={'request': request}
-            )
-            return self.get_paginated_response(serializer.data)
 
-        serializer = UserWithRecipesSerializer(
-            following, many=True, context={'request': request}
-        )
-        return Response({'count': following.count(), 'results': serializer.data})
-    
+        # Извлекаем авторов из подписок
+        authors = [follow.author for follow in following]
+
+        results = []
+        recipes_limit = request.query_params.get('recipes_limit', None)
+
+        for author in authors:
+            # Получаем все рецепты автора, ограниченные по количеству
+            recipes = Recipe.objects.filter(author=author)
+            if recipes_limit is not None:
+                recipes = recipes[:int(recipes_limit)]
+
+            recipes_count = recipes.count()
+            recipes_data = RecipeMinifiedSerializer(recipes, many=True, context={'request': request}).data
+
+            response_data = UserWithRecipesSerializer(author, context={'request': request}).data
+            response_data['recipes_count'] = recipes_count
+            response_data['recipes'] = recipes_data
+
+            results.append(response_data)
+
+        # Пагинация для results, а не for following
+        page = self.paginate_queryset(results)
+
+        if page is not None:
+            return self.get_paginated_response(page)
+
+        return Response({'count': len(results), 'results': results})
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def subscribe(self, request, pk=None):
@@ -96,9 +113,23 @@ class UserViewSet(viewsets.ModelViewSet):
 
         follow, created = Follow.objects.get_or_create(user=request.user, author=author)
         if created:
-            return Response(UserWithRecipesSerializer(author, context={'request': request}).data, status=status.HTTP_201_CREATED)
+            # Получаем все рецепты автора, ограниченные по количеству
+            recipes_limit = request.query_params.get('recipes_limit', None)
+            recipes = Recipe.objects.filter(author=author)
+            if recipes_limit is not None:
+                recipes = recipes[:int(recipes_limit)]
+
+            recipes_count = recipes.count()
+            recipes_data = RecipeMinifiedSerializer(recipes, many=True, context={'request': request}).data
+
+            response_data = UserWithRecipesSerializer(author, context={'request': request}).data
+            response_data['recipes_count'] = recipes_count
+            response_data['recipes'] = recipes_data
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
 
         return Response({'error': 'Already subscribed.'}, status=status.HTTP_400_BAD_REQUEST)
+
 
     @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
     def unsubscribe(self, request, pk=None):

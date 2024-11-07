@@ -95,6 +95,7 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 class UserWithRecipesSerializer(serializers.ModelSerializer):
     recipes = RecipeMinifiedSerializer(many=True, read_only=True)
     is_subscribed = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(required=False)
 
     class Meta:
         model = User
@@ -126,8 +127,6 @@ class AvatarSerializer(serializers.ModelSerializer):
         if 'avatar' not in attrs or attrs['avatar'] is None:
             raise ValidationError({'avatar': 'Необходимо добавить аватар.'})
         return attrs
-
-
 
         
 
