@@ -76,7 +76,7 @@ class FollowSerializer(serializers.ModelSerializer):
 class IngredientInRecipeSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(
         queryset=Ingredient.objects.all(),
-        # Убираем source, чтобы не было путаницы
+
     )
     amount = serializers.IntegerField()
 
@@ -144,6 +144,8 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit')
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
+    recipe = RecipeMinifiedSerializer(read_only=True)
+
     class Meta:
         model = ShoppingCart
         fields = ('id', 'recipe')
@@ -156,7 +158,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-    ingredients = IngredientInRecipeSerializer(many=True)  # ожидаем массив объектов
+    ingredients = IngredientInRecipeSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True
     )
@@ -219,9 +221,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     
     def to_representation(self, instance):
-        # Используем стандартное представление
         representation = super().to_representation(instance)
-        # Получаем полные объекты тегов вместо их ID
         representation['tags'] = TagSerializer(instance.tags.all(), many=True).data
         return representation
     

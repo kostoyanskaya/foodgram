@@ -20,6 +20,9 @@ from rest_framework.pagination import LimitOffsetPagination
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from .paginations import LimitPagination 
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from django.http import HttpResponse
 
 User = get_user_model()
 
@@ -180,13 +183,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Получаем тег по ID из параметров URL."""
         return get_object_or_404(Recipe, id=self.kwargs['pk'])
 
-
     @action(methods=['post'], detail=True, permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):
         recipe = self.get_object()
         if not Favorite.objects.filter(user=request.user, recipe=recipe).exists():
-            favorite = Favorite.objects.create(user=request.user, recipe=recipe)
-            serializer = RecipeSerializer(favorite.recipe, context={'request': request})
+            Favorite.objects.create(user=request.user, recipe=recipe)
+            serializer = RecipeMinifiedSerializer(recipe, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response({'detail': 'Рецепт уже в избранном'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -208,16 +210,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
         user = request.user
         shopping_cart = ShoppingCart.objects.filter(user=user).all()
+        ingredients = [item.recipe.name for item in shopping_cart]
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="shopping_cart.pdf"'
 
-        data = "Рецепт"
-        for item in shopping_cart:
-            data += f"{item.recipe.name}\n"
+        p = canvas.Canvas(response, pagesize=letter)
+        p.drawString(100, 750, "Shopping Cart:")
+        for i, ingredient in enumerate(ingredients):
+            p.drawString(100, 730 - (i * 20), ingredient)
+        p.showPage()
+        p.save()
 
-        return Response(data, status=status.HTTP_200_OK)
+        return response
 
     @action(detail=True, methods=['post', 'delete'], permission_classes=[IsAuthenticated])
     def shopping_cart(self, request, pk=None):
@@ -226,7 +234,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.method == 'POST':
             shopping_cart, created = ShoppingCart.objects.get_or_create(user=request.user, recipe=recipe)
             if created:
-                serializer = ShoppingCartSerializer(shopping_cart)
+                # Получаем рецепт и сериализуем его
+                serializer = RecipeMinifiedSerializer(recipe)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response({'detail': 'Рецепт уже добавлен в список покупок'}, status=status.HTTP_400_BAD_REQUEST)
 
