@@ -1,6 +1,7 @@
 from django.db import models
 from users.models import User
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Tag(models.Model):
     name = models.CharField(max_length=200, unique=True)
@@ -25,7 +26,10 @@ class Recipe(models.Model):
     )
     name = models.CharField(max_length=256)
     text = models.TextField()
-    cooking_time = models.PositiveIntegerField()
+    cooking_time = models.PositiveIntegerField(validators=(
+            MinValueValidator(1, message='Одна минута'),
+            MaxValueValidator(1440, message='1440 минут'),
+        ))
     image = models.ImageField(upload_to='recipes/')
     tags = models.ManyToManyField(Tag)
 
@@ -41,7 +45,7 @@ class ShoppingCart(models.Model):
     
 class Favorite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='favorited_by')
 
     class Meta:
         unique_together = ('user', 'recipe')

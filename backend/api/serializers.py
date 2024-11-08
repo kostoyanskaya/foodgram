@@ -210,13 +210,13 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if isinstance(request.user, AnonymousUser):
-            return False  # Если пользователь не авторизован
+            return False
         return Favorite.objects.filter(user=request.user, recipe=obj).exists()
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         if isinstance(request.user, AnonymousUser):
-            return False  # Если пользователь не авторизован
+            return False
         return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
 
     

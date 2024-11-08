@@ -108,38 +108,39 @@ class UserViewSet(viewsets.ModelViewSet):
 
         return Response({'count': len(results), 'results': results})
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post', 'delete'], permission_classes=[IsAuthenticated])
     def subscribe(self, request, pk=None):
         author = get_object_or_404(User, pk=pk)
+        
         if author == request.user:
             return Response({'error': 'Cannot subscribe to yourself.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        follow, created = Follow.objects.get_or_create(user=request.user, author=author)
-        if created:
-            # Получаем все рецепты автора, ограниченные по количеству
-            recipes_limit = request.query_params.get('recipes_limit', None)
-            recipes = Recipe.objects.filter(author=author)
-            if recipes_limit is not None:
-                recipes = recipes[:int(recipes_limit)]
+        if request.method == 'POST':
+            follow, created = Follow.objects.get_or_create(user=request.user, author=author)
+            if created:
+                # Получаем все рецепты автора, ограниченные по количеству
+                recipes_limit = request.query_params.get('recipes_limit', None)
+                recipes = Recipe.objects.filter(author=author)
+                if recipes_limit is not None:
+                    recipes = recipes[:int(recipes_limit)]
 
-            recipes_count = recipes.count()
-            recipes_data = RecipeMinifiedSerializer(recipes, many=True, context={'request': request}).data
+                recipes_count = recipes.count()
+                recipes_data = RecipeMinifiedSerializer(recipes, many=True, context={'request': request}).data
 
-            response_data = UserWithRecipesSerializer(author, context={'request': request}).data
-            response_data['recipes_count'] = recipes_count
-            response_data['recipes'] = recipes_data
+                response_data = UserWithRecipesSerializer(author, context={'request': request}).data
+                response_data['recipes_count'] = recipes_count
+                response_data['recipes'] = recipes_data
 
-            return Response(response_data, status=status.HTTP_201_CREATED)
+                return Response(response_data, status=status.HTTP_201_CREATED)
 
-        return Response({'error': 'Already subscribed.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Already subscribed.'}, status=status.HTTP_400_BAD_REQUEST)
 
-
-    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
-    def unsubscribe(self, request, pk=None):
-        author = get_object_or_404(User, pk=pk)
-        follow = get_object_or_404(Follow, user=request.user, author=author)
-        follow.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        elif request.method == 'DELETE':
+            follow = Follow.objects.filter(user=request.user, author=author).first()
+            if follow:
+                follow.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response({'Subscription not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -183,23 +184,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Получаем тег по ID из параметров URL."""
         return get_object_or_404(Recipe, id=self.kwargs['pk'])
 
-    @action(methods=['post'], detail=True, permission_classes=[IsAuthenticated])
+    @action(methods=['post', 'delete'], detail=True, permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):
         recipe = self.get_object()
-        if not Favorite.objects.filter(user=request.user, recipe=recipe).exists():
-            Favorite.objects.create(user=request.user, recipe=recipe)
-            serializer = RecipeMinifiedSerializer(recipe, context={'request': request})
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response({'detail': 'Рецепт уже в избранном'}, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(methods=['delete'], detail=True, permission_classes=[IsAuthenticated])
-    def unfavorite(self, request, pk=None):
-        recipe = self.get_object()
-        favorite = Favorite.objects.filter(user=request.user, recipe=recipe).first()
-        if favorite:
-            favorite.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'detail': 'Рецепт не найден в избранном'}, status=status.HTTP_400_BAD_REQUEST)
+        if request.method == 'POST':
+            if not Favorite.objects.filter(user=request.user, recipe=recipe).exists():
+                Favorite.objects.create(user=request.user, recipe=recipe)
+                serializer = RecipeMinifiedSerializer(recipe, context={'request': request})
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({'detail': 'Рецепт уже в избранном'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        elif request.method == 'DELETE':
+            favorite = Favorite.objects.filter(user=request.user, recipe=recipe).first()
+            if favorite:
+                favorite.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response({'detail': 'Рецепт не найден в избранном'}, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=True, methods=['GET'], url_path='get-link')
     def get_link(self, request, pk):
@@ -234,13 +234,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.method == 'POST':
             shopping_cart, created = ShoppingCart.objects.get_or_create(user=request.user, recipe=recipe)
             if created:
-                # Получаем рецепт и сериализуем его
                 serializer = RecipeMinifiedSerializer(recipe)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response({'detail': 'Рецепт уже добавлен в список покупок'}, status=status.HTTP_400_BAD_REQUEST)
 
         elif request.method == 'DELETE':
-            shopping_cart = get_object_or_404(ShoppingCart, user=request.user, recipe=recipe)
-            shopping_cart.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            shopping_cart = ShoppingCart.objects.filter(user=request.user, recipe=recipe).first()
+            if shopping_cart:
+                shopping_cart.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response({'detail': 'Рецепт не найден в корзине'}, status=status.HTTP_400_BAD_REQUEST)
 
