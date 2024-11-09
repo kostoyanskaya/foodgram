@@ -234,11 +234,11 @@ class RecipeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You must be logged in to create a recipe.")
         recipe = Recipe.objects.create(author=user, **validated_data)
 
-        # Устанавливаем теги через их ID
+
         recipe.tags.set(tag_ids)
 
         for ingredient_data in ingredients_data:
-            ingredient_obj = ingredient_data['id']  # Теперь это объект, закодированный как ID
+            ingredient_obj = ingredient_data['id']
             amount = ingredient_data['amount']
             IngredientInRecipe.objects.create(
                 recipe=recipe,
@@ -259,15 +259,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         if not tag_ids:
             raise serializers.ValidationError('Поле tags не должно быть пустым.')
 
-        # Очистка старых ингредиентов и тегов
         instance.ingredients.clear()
         instance.tags.clear()
 
-        # Устанавливаем теги через их ID
         instance.tags.set(tag_ids)
 
         for ingredient_data in ingredients_data:
-            ingredient_obj = ingredient_data['id']  # Теперь это объект, закодированны как ID
+            ingredient_obj = ingredient_data['id']
             amount = ingredient_data['amount']
             IngredientInRecipe.objects.create(
                 recipe=instance,

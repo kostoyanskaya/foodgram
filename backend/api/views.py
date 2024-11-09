@@ -183,6 +183,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_object(self):
         """Получаем тег по ID из параметров URL."""
         return get_object_or_404(Recipe, id=self.kwargs['pk'])
+    
+    def destroy(self, request, *args, **kwargs):
+        recipe = self.get_object()
+        if recipe.author != request.user:
+            return Response({'detail': 'У вас нет прав на удаление этого рецепта.'}, status=status.HTTP_403_FORBIDDEN)
+        self.perform_destroy(recipe)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(methods=['post', 'delete'], detail=True, permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):
