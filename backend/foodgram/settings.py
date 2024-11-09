@@ -137,6 +137,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
     ),
@@ -148,12 +151,14 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
-    'USER_CREATE_PASSWORD_RETYPE': True,
-    'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
-    'SERIALIZERS': {
+    "SERIALIZERS": {
         'user_create': 'api.serializers.UserRegistrationSerializer',
-        'user': 'api.serializers.UserDetailSerializer',
-        'current_user': 'api.serializers.UserAnotherSerializer',
+        "user": ("api.serializers.UserDetailSerializer"),
+        "current_user": ("api.serializers.UserDetailSerializer"),
+    },
+    "PERMISSIONS": {
+        "user": ("rest_framework.permissions.IsAuthenticatedOrReadOnly"),
+        "user_list": ("rest_framework.permissions.AllowAny",),
     },
 }
 

@@ -17,6 +17,21 @@ from rest_framework.exceptions import PermissionDenied
 
 User = get_user_model()
 
+class UserSerializer(serializers.ModelSerializer):
+
+
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'avatar',
+            'is_subscribed'
+        )
+
 class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
         if isinstance(data, str) and data.startswith('data:image'):
@@ -51,6 +66,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('email', 'id', 'username', 'first_name', 'last_name', 'is_subscribed', 'avatar')
+
 
 class UserSerializer(serializers.ModelSerializer):
     avatar = Base64ImageField(required=False, allow_null=True)
@@ -123,7 +139,6 @@ class AvatarSerializer(serializers.ModelSerializer):
         fields = ('avatar',)
 
     def validate(self, attrs):
-        # Проверка наличия поля 'avatar' при запросе на обновление
         if 'avatar' not in attrs or attrs['avatar'] is None:
             raise ValidationError({'avatar': 'Необходимо добавить аватар.'})
         return attrs

@@ -4,7 +4,7 @@ from rest_framework.permissions import AllowAny
 from users.models import Follow
 from rest_framework.response import Response
 from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart, IngredientInRecipe
-from .serializers import TagSerializer, RecipeSerializer, UserDetailSerializer, IngredientSerializer, AvatarSerializer, UserWithRecipesSerializer, ShoppingCartSerializer, RecipeMinifiedSerializer, UserRegistrationSerializer
+from .serializers import TagSerializer, RecipeSerializer, UserDetailSerializer, IngredientSerializer, AvatarSerializer, UserWithRecipesSerializer, ShoppingCartSerializer, RecipeMinifiedSerializer, UserRegistrationSerializer, UserSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from .filters import RecipeFilter, IngredientFilter
@@ -23,33 +23,34 @@ from .paginations import LimitPagination
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
+from djoser.views import UserViewSet as DjoserUserViewSet
 
 User = get_user_model()
 
-
-
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(DjoserUserViewSet):
+    """Работа с пользователями."""
     queryset = User.objects.all()
-    serializer_class = UserRegistrationSerializer
+    serializer_class = UserDetailSerializer
     permission_classes = [AllowAny]
     pagination_class = LimitPagination
-    http_method_names = ['get', 'post', 'put', 'delete']
-
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return UserRegistrationSerializer
-        return UserDetailSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
         return queryset
 
+    def create(self, request, *args, **kwargs):
+        serializer = UserRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
     @action(
         detail=False,
         methods=['PUT', 'DELETE'],
         permission_classes=(IsAuthenticated,),
         url_path='me/avatar'
     )
+
     def manage_avatar(self, request):
         user = request.user
         
@@ -78,15 +79,12 @@ class UserViewSet(viewsets.ModelViewSet):
     def subscriptions(self, request):
         user = request.user
         following = Follow.objects.filter(user=user).select_related('author')
-
-        # Извлекаем авторов из подписок
         authors = [follow.author for follow in following]
 
         results = []
         recipes_limit = request.query_params.get('recipes_limit', None)
 
         for author in authors:
-            # Получаем все рецепты автора, ограниченные по количеству
             recipes = Recipe.objects.filter(author=author)
             if recipes_limit is not None:
                 recipes = recipes[:int(recipes_limit)]
@@ -100,7 +98,6 @@ class UserViewSet(viewsets.ModelViewSet):
 
             results.append(response_data)
 
-        # Пагинация для results, а не for following
         page = self.paginate_queryset(results)
 
         if page is not None:
@@ -109,16 +106,15 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response({'count': len(results), 'results': results})
 
     @action(detail=True, methods=['post', 'delete'], permission_classes=[IsAuthenticated])
-    def subscribe(self, request, pk=None):
-        author = get_object_or_404(User, pk=pk)
-        
+    def subscribe(self, request, id=None):  # Вместо "id" используем "pk"
+        author = get_object_or_404(User, pk=id)
+
         if author == request.user:
             return Response({'error': 'Cannot subscribe to yourself.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if request.method == 'POST':
             follow, created = Follow.objects.get_or_create(user=request.user, author=author)
             if created:
-                # Получаем все рецепты автора, ограниченные по количеству
                 recipes_limit = request.query_params.get('recipes_limit', None)
                 recipes = Recipe.objects.filter(author=author)
                 if recipes_limit is not None:
@@ -140,7 +136,7 @@ class UserViewSet(viewsets.ModelViewSet):
             if follow:
                 follow.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response({'Subscription not found.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Subscription not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
