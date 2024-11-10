@@ -1,50 +1,48 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.core.exceptions import ValidationError
-import re
-from django.core.validators import MaxLengthValidator, MinLengthValidator
+from .validators import validate_username
 
-def validate_username(value):
-    if value == 'me':
-        raise ValidationError('The username "me" is not allowed.')
-
-    pattern = r'[\w.@+-]+\Z'
-    if not re.match(pattern, value):
-        raise ValidationError('Username can not be with such simbols.')
 
 class User(AbstractUser):
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ('username', 'first_name', 'last_name')
     username = models.CharField(
-        'Username',
+        verbose_name='Логин',
         unique=True,
         blank=False,
         max_length=150,
         validators=[validate_username]
     )
     email = models.EmailField(
-        'E-mail address',
+        verbose_name='Электронная почта',
         unique=True,
         blank=False,
     )
     first_name = models.CharField(
-        'first name',
+        verbose_name='Имя',
         max_length=150,
         blank=False
     )
     last_name = models.CharField(
-        'last name',
+        verbose_name='Фамилия',
         max_length=150,
         blank=False
     )
     is_subscribed = models.BooleanField(
-        'Подписка',
-        default=False)
-    avatar = models.ImageField(upload_to='users/', blank=True, null=True)
+        verbose_name='Подписка',
+        default=False
+    )
+    avatar = models.ImageField(
+        upload_to='users/', 
+        verbose_name='Аватар',
+        blank=True, 
+        null=True
+    )
+
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
 
 
 class Follow(models.Model):
-    
     user = models.ForeignKey(
         User,
         verbose_name='Кто подписан',
@@ -59,7 +57,8 @@ class Follow(models.Model):
     )
 
     class Meta:
-        verbose_name = 'подписка'
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
 
     def __str__(self):
         return f'{self.user} подписался на {self.author}'

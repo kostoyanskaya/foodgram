@@ -1,5 +1,5 @@
 from django.contrib import admin
-from recipes.models import Tag, Ingredient, Favorite, ShoppingCart, Recipe, IngredientInRecipe
+from recipes.models import Tag, Ingredient, Favorite, ShoppingCart, Recipe
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
@@ -19,13 +19,12 @@ class RecipeAdmin(admin.ModelAdmin):
         return ', '.join(
             [ingredient.name for ingredient in obj.ingredients.all()]
         )
-    ingredients_list.short_description = 'Ингредиенты'  # Название колонки
+    ingredients_list.short_description = 'Ингредиенты'
 
     def tags_list(self, obj):
         return ', '.join([tag.name for tag in obj.tags.all()])
-    tags_list.short_description = 'Теги'  # Название колонки
+    tags_list.short_description = 'Теги'
 
-    # Опционально добавляем функции для отображения объектов ингредиентов и тегов
     list_display += ('tags_list', 'ingredients_list')
 
 

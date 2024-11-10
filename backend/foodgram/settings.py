@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-oqu!9s(=0yo@3_$4*wl@%d%1n-ltpqq(q)0e#r3%e#1cbndjqz
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['51.250.105.199', 'localhost', '127.0.0.1', 'testanytitle.hopto.org']
 
 
 # Application definition
@@ -82,8 +82,14 @@ WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        # Меняем настройку Django: теперь для работы будет использоваться
+        # бэкенд postgresql
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'foodgram'),
+        'USER': os.getenv('POSTGRES_USER', 'foodgram'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', ''),
+        'PORT': os.getenv('DB_PORT', 5432)
     }
 }
 
@@ -151,11 +157,6 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
-    "SERIALIZERS": {
-        'user_create': 'api.serializers.UserRegistrationSerializer',
-        "user": ("api.serializers.UserDetailSerializer"),
-        "current_user": ("api.serializers.UserDetailSerializer"),
-    },
     "PERMISSIONS": {
         "user": ("rest_framework.permissions.IsAuthenticatedOrReadOnly"),
         "user_list": ("rest_framework.permissions.AllowAny",),
