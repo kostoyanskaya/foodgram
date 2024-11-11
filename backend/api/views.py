@@ -254,7 +254,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['GET'], url_path='get-link')
     def get_link(self, request, pk):
-        """Получаем короткую ссылку на рецепт по ID."""
+        """Получаем короткую ссылку."""
         get_object_or_404(Recipe, id=pk)
         return Response(
             {'short-link': f'http://127.0.0.1:8000/recipes/{pk}'},
