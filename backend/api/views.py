@@ -154,7 +154,7 @@ class UserViewSet(DjoserUserViewSet):
                 )
 
             return Response(
-                {'Already subscribed.'}, status=status.HTTP_400_BAD_REQUEST
+                {'Уже подписан.'}, status=status.HTTP_400_BAD_REQUEST
             )
 
         elif request.method == 'DELETE':
