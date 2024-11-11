@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-oqu!9s(=0yo@3_$4*wl@%d%1n-ltpqq(q)0e#r3%e#1cbndjqz'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['51.250.105.199', 'localhost', '127.0.0.1', 'foodgramdelicious.ddnsking.com']
 
