@@ -312,5 +312,5 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 shopping_cart.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(
-                {'Рецепт не найден.'}, status=status.HTTP_400_BAD_REQUEST
+                {'Не найден.'}, status=status.HTTP_400_BAD_REQUEST
             )
