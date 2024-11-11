@@ -1,6 +1,7 @@
 from django.contrib import admin
 from recipes.models import Tag, Ingredient, Favorite, ShoppingCart, Recipe
 
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('name', 'author')
@@ -10,7 +11,9 @@ class RecipeAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        return queryset.select_related('author').prefetch_related('tags', 'ingredients')
+        return queryset.select_related('author').prefetch_related(
+            'tags', 'ingredients'
+        )
 
     def author(self, obj):
         return obj.author.username
@@ -39,7 +42,7 @@ class TagAdmin(admin.ModelAdmin):
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = ('user', 'recipe')
 
-    
+
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ('name', 'measurement_unit')

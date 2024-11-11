@@ -2,9 +2,14 @@ from django.db import models
 from users.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 
+
 class Tag(models.Model):
-    name = models.CharField(max_length=200, unique=True, verbose_name='Название')
-    slug = models.SlugField(max_length=32, unique=True, blank=True, null=True, verbose_name='Slug')
+    name = models.CharField(
+        max_length=200, unique=True, verbose_name='Название'
+    )
+    slug = models.SlugField(
+        max_length=32, unique=True, blank=True, null=True, verbose_name='Slug'
+    )
 
     def __str__(self):
         return self.name
@@ -15,8 +20,12 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
-    name = models.CharField(max_length=200, verbose_name='Название ингредиента')
-    measurement_unit = models.CharField(max_length=200, verbose_name='Единица измерения')
+    name = models.CharField(
+        max_length=200, verbose_name='Название ингредиента'
+    )
+    measurement_unit = models.CharField(
+        max_length=200, verbose_name='Единица измерения'
+    )
 
     class Meta:
         verbose_name = 'Ингредиент'
@@ -24,7 +33,9 @@ class Ingredient(models.Model):
 
 
 class Recipe(models.Model):
-    author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Автор')
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name='Автор'
+    )
     ingredients = models.ManyToManyField(
         Ingredient,
         verbose_name='Ингредиенты',
@@ -49,8 +60,12 @@ class Recipe(models.Model):
 
 
 class ShoppingCart(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь')
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, verbose_name='Рецепт')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name='Пользователь'
+    )
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, verbose_name='Рецепт'
+    )
 
     class Meta:
         unique_together = ('user', 'recipe')
@@ -59,8 +74,14 @@ class ShoppingCart(models.Model):
 
 
 class Favorite(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь')
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='favorited_by', verbose_name='Рецепт')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name='Пользователь'
+    )
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE,
+        related_name='favorited_by',
+        verbose_name='Рецепт'
+    )
 
     class Meta:
         unique_together = ('user', 'recipe')
