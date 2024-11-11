@@ -64,7 +64,7 @@ class UserViewSet(DjoserUserViewSet):
             user.avatar = None
             user.save()
             return Response(
-                {'Аватар успешно удален.'}, status=status.HTTP_204_NO_CONTENT
+                {'Аватар удален.'}, status=status.HTTP_204_NO_CONTENT
             )
 
     @action(
