@@ -205,6 +205,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
+    pagination_class = LimitPagination
 
     def get_object(self):
         """Получаем тег по ID из параметров URL."""
@@ -269,16 +270,36 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         user = request.user
         shopping_cart = ShoppingCart.objects.filter(user=user).all()
-        ingredients = [item.recipe.name for item in shopping_cart]
+
+        ingredients_count = {}
+
+        for item in shopping_cart:
+            ingredients = item.recipe.ingredients.all()
+            for ingredient in ingredients:
+                ingredient_id = ingredient.id
+                ingredient_name = ingredient.name
+                ingredient_amount = ingredient.amount
+                if ingredient_id in ingredients_count:
+                    ingredients_count[ingredient_id]['amount'] += ingredient_amount
+                else:
+                    ingredients_count[ingredient_id] = {
+                        'name': ingredient_name,
+                        'amount': ingredient_amount
+                    }
+
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = (
-            'attachment; filename="shopping_cart.pdf"'
-        )
+        response['Content-Disposition'] = 'attachment; filename="shopping_cart.pdf"'
 
         p = canvas.Canvas(response, pagesize=letter)
         p.drawString(100, 750, "Shopping Cart:")
-        for i, ingredient in enumerate(ingredients):
-            p.drawString(100, 730 - (i * 20), ingredient)
+
+        y_position = 730
+        for ingredient in ingredients_count.values():
+            p.drawString(
+                100, y_position, f"{ingredient['name']}: {ingredient['amount']}"
+            )
+            y_position -= 20
+
         p.showPage()
         p.save()
         return response

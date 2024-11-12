@@ -50,11 +50,16 @@ class Recipe(models.Model):
     ), verbose_name='Время приготовления')
     image = models.ImageField(upload_to='recipes/', verbose_name='Изображение')
     tags = models.ManyToManyField(Tag, verbose_name='Теги')
-
+    pub_date = models.DateTimeField(
+        verbose_name='Дата публикации',
+        auto_now_add=True
+    )
+        
     def __str__(self):
         return self.name
 
     class Meta:
+        ordering = ('-pub_date',)
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
 
@@ -106,5 +111,6 @@ class IngredientInRecipe(models.Model):
     amount = models.PositiveSmallIntegerField(verbose_name='Количество')
 
     class Meta:
+        default_related_name = 'ingredient_recipe'
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецепте'
