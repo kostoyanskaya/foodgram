@@ -29,7 +29,7 @@ class RecipeAdmin(admin.ModelAdmin):
         return obj.author.username
 
     def favorites_count(self, obj):
-        return obj.favorite_set.count()
+        return obj.favorited_by.count()
     favorites_count.short_description = 'Количество в избранном'
 
     def ingredients_list(self, obj):
