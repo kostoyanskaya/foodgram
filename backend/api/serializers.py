@@ -39,7 +39,7 @@ class Base64ImageField(serializers.ImageField):
 
 
 class UserRegistrationSerializer(UserCreateSerializer):
-    """Сериализатор для создания пользователя"""
+    """Сериализатор для создания пользователя."""
 
     class Meta(UserCreateSerializer.Meta):
         fields = (
