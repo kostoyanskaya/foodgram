@@ -19,7 +19,7 @@ def validate_ingredients(value):
     for ingredient in value:
         if ingredient['amount'] < 1:
             raise serializers.ValidationError(
-                "Количество ингредиента должно быть больше 0."
+                "Количество ингредиента должно быть больше 0"
             )
         ingredient_ids.append(ingredient['ingredient']['id'])
 
