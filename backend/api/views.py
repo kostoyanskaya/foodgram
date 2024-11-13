@@ -23,6 +23,8 @@ from .serializers import (
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Follow
 
+SITE_URL = 'http://foodgramdelicious.ddnsking.com'
+
 User = get_user_model()
 
 
@@ -260,7 +262,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Получаем короткую ссылку."""
         get_object_or_404(Recipe, id=pk)
         return Response(
-            {'short-link': f'http://127.0.0.1:8000/recipes/{pk}'},
+            {'short-link': f'{SITE_URL}/recipes/{pk}'},
             status=status.HTTP_200_OK
         )
 
