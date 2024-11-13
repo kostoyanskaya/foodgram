@@ -1,18 +1,24 @@
-from rest_framework import serializers
-from users.models import Follow
-from recipes.models import (
-    Tag, Recipe, Ingredient, ShoppingCart, Favorite, IngredientInRecipe
-)
-from django.core.files.base import ContentFile
 import base64
-from drf_extra_fields.fields import Base64ImageField
+
 from django.contrib.auth import get_user_model
-from djoser.serializers import UserCreateSerializer
-from rest_framework.exceptions import ValidationError
 from django.contrib.auth.models import AnonymousUser
+from django.core.files.base import ContentFile
+from drf_extra_fields.fields import Base64ImageField
+from djoser.serializers import UserCreateSerializer
+from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied, ValidationError
+
 from .validators import validate_ingredients, validate_tags
-from rest_framework.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    IngredientInRecipe,
+    Recipe,
+    ShoppingCart,
+    Tag,
+)
+from users.models import Follow
+
 
 User = get_user_model()
 
@@ -89,7 +95,6 @@ class IngredientInRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = IngredientInRecipe
         fields = ('id', 'amount', 'name', 'measurement_unit')
-        
 
 
 class RecipeMinifiedSerializer(serializers.ModelSerializer):
@@ -169,14 +174,15 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         return ShoppingCart.objects.create(**validated_data)
 
 
-
 class RecipeSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Recipe."""
     author = UserDetailSerializer(read_only=True)
     image = Base64ImageField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-    ingredients = IngredientInRecipeSerializer(many=True, source='ingredient_recipe')
+    ingredients = IngredientInRecipeSerializer(
+        many=True, source='ingredient_recipe'
+    )
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True
     )
@@ -202,7 +208,6 @@ class RecipeSerializer(serializers.ModelSerializer):
             'tags': {'required': True, 'allow_empty': False},
         }
 
-
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if isinstance(request.user, AnonymousUser):
@@ -218,14 +223,14 @@ class RecipeSerializer(serializers.ModelSerializer):
         return ShoppingCart.objects.filter(
             user=request.user, recipe=obj
         ).exists()
-    
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['tags'] = TagSerializer(
             instance.tags.all(), many=True
         ).data
         return representation
-    
+
     def validate_tags(self, value):
         return validate_tags(value)
 
@@ -238,7 +243,9 @@ class RecipeSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user
 
         if isinstance(user, AnonymousUser):
-            raise serializers.ValidationError("You must be logged in to create a recipe.")
+            raise serializers.ValidationError(
+                "Вы должны войти в систему, чтобы создать рецепт."
+            )
 
         recipe = Recipe.objects.create(author=user, **validated_data)
         recipe.tags.set(tags_data)
@@ -263,9 +270,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         tags_data = validated_data.pop('tags', [])
 
         if not ingredients_data:
-            raise serializers.ValidationError("Поле ingredients не должно быть пустым.")
+            raise serializers.ValidationError(
+                "Поле ingredients не должно быть пустым."
+            )
         if not tags_data:
-            raise serializers.ValidationError("Поле tags не должно быть пустым.")
+            raise serializers.ValidationError(
+                "Поле tags не должно быть пустым."
+            )
 
         instance.ingredients.all().delete()
         instance.tags.clear()

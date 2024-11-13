@@ -1,22 +1,36 @@
 from django.contrib import admin
-from recipes.models import Tag, Ingredient, Favorite, ShoppingCart, Recipe
+
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from .models import User
+
+
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name')
+    list_display_links = ('username',)
+    search_fields = ('username', 'email')
 
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'author')
+    list_display = ('name', 'author', 'favorites_count')
     list_display_links = ('name',)
-    search_fields = ('name', 'text')
+    search_fields = ('name', 'author__username')
     list_filter = ('tags',)
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.select_related('author').prefetch_related(
-            'tags', 'ingredients'
+            'tags',
+            'ingredients'
         )
 
     def author(self, obj):
         return obj.author.username
+
+    def favorites_count(self, obj):
+        return obj.favorite_set.count()
+    favorites_count.short_description = 'Количество в избранном'
 
     def ingredients_list(self, obj):
         return ', '.join(

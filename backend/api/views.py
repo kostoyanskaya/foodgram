@@ -1,25 +1,27 @@
-from rest_framework import viewsets, status
-from rest_framework.permissions import AllowAny
-from users.models import Follow
-from rest_framework.response import Response
-from recipes.models import Tag, Recipe, Ingredient, Favorite, ShoppingCart
-from .serializers import (
-    TagSerializer, RecipeSerializer, UserDetailSerializer,
-    IngredientSerializer, AvatarSerializer, UserWithRecipesSerializer,
-    RecipeMinifiedSerializer, UserRegistrationSerializer
-)
-from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
-from .filters import RecipeFilter, IngredientFilter
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.decorators import action
-from django.contrib.auth import get_user_model
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from .paginations import LimitPagination
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+
+from django.contrib.auth import get_user_model
+from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import (
+    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
+)
+from rest_framework.response import Response
+
+from .filters import IngredientFilter, RecipeFilter
+from .paginations import LimitPagination
+from .serializers import (
+    AvatarSerializer, IngredientSerializer, RecipeMinifiedSerializer,
+    RecipeSerializer, TagSerializer, UserDetailSerializer,
+    UserRegistrationSerializer, UserWithRecipesSerializer
+)
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from users.models import Follow
 
 User = get_user_model()
 
@@ -280,7 +282,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 ingredient_name = ingredient.name
                 ingredient_amount = ingredient.amount
                 if ingredient_id in ingredients_count:
-                    ingredients_count[ingredient_id]['amount'] += ingredient_amount
+                    ingredient_data = ingredients_count[ingredient_id]
+                    ingredient_data['amount'] += ingredient_amount
                 else:
                     ingredients_count[ingredient_id] = {
                         'name': ingredient_name,
@@ -288,7 +291,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     }
 
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="shopping_cart.pdf"'
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_cart.pdf"'
+        )
 
         p = canvas.Canvas(response, pagesize=letter)
         p.drawString(100, 750, "Shopping Cart:")
@@ -296,7 +301,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         y_position = 730
         for ingredient in ingredients_count.values():
             p.drawString(
-                100, y_position, f"{ingredient['name']}: {ingredient['amount']}"
+                100,
+                y_position,
+                f"{ingredient['name']}: {ingredient['amount']}"
             )
             y_position -= 20
 

@@ -1,6 +1,7 @@
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
+
 from users.models import User
-from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Tag(models.Model):
@@ -54,7 +55,7 @@ class Recipe(models.Model):
         verbose_name='Дата публикации',
         auto_now_add=True
     )
-        
+
     def __str__(self):
         return self.name
 

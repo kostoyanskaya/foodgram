@@ -13,8 +13,6 @@ DEBUG = False
 ALLOWED_HOSTS = ['51.250.105.199', 'localhost', '127.0.0.1', 'foodgramdelicious.ddnsking.com']
 
 
-
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

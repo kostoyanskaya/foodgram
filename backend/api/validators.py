@@ -11,12 +11,16 @@ def validate_tags(value):
 
 def validate_ingredients(value):
     if not value:
-        raise serializers.ValidationError("Поле ingredients не должно быть пустым.")
+        raise serializers.ValidationError(
+            "Поле ingredients не должно быть пустым."
+        )
 
     ingredient_ids = []
     for ingredient in value:
         if ingredient['amount'] < 1:
-            raise serializers.ValidationError("Количество ингредиента должно быть больше 0.")
+            raise serializers.ValidationError(
+                "Количество ингредиента должно быть больше 0."
+            )
         ingredient_ids.append(ingredient['ingredient']['id'])
 
     if len(ingredient_ids) != len(set(ingredient_ids)):
