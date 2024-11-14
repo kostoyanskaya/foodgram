@@ -302,36 +302,30 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def download_shopping_cart(self, request):
-        cart = request.user.shoppingcarts.prefetch_related(
-            'recipe__ingredients'
-        ).annotate(
-            total_amount=Sum('recipe__ingredients__amount')
-        ).values(
-            'recipe__id',
-            'recipe__ingredients__name',
-            'recipe__ingredients__measurement_unit',
-            'total_amount'
-        )
-
-        if not cart:
-            return Response(
-                {'Корзина пуста.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        shopping_cart_contents = "Shopping Cart:\\n"
-        for item in cart:
-            shopping_cart_contents += (
-                f"{item['recipe__ingredients__name']}: {item['total_amount']} "
-                f"{item['recipe__ingredients__measurement_unit']}\\n"
-            )
-
-        response = HttpResponse(
-            shopping_cart_contents,
-            content_type='text/plain; charset=utf-8'
-        )
+        user = request.user
+        shopping_cart = ShoppingCart.objects.filter(user=user).all()
+        ingredients_count = {}
+        for item in shopping_cart:
+            ingredients = item.recipe.ingredients.all()
+            for ingredient_in_recipe in ingredients:
+                ingredient_id = ingredient_in_recipe.id
+                ingredient_name = ingredient_in_recipe.name
+                ingredient_amount = ingredient_in_recipe.amount
+                if ingredient_id in ingredients_count:
+                    ingredients_count[ingredient_id]['amount'] += (
+                        ingredient_amount
+                    )
+                else:
+                    ingredients_count[ingredient_id] = {
+                        'name': ingredient_name,
+                        'amount': ingredient_amount
+                    }
+        response = HttpResponse(content_type='text/plain')
         response['Content-Disposition'] = (
             'attachment; filename="shopping_cart.txt"'
         )
+        response.write("Shopping Cart:\\n")
+        for ingredient in ingredients_count.values():
+            response.write(f"{ingredient['name']}: {ingredient['amount']}\\n")
 
         return response
