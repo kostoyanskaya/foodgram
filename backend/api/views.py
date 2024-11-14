@@ -1,6 +1,3 @@
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
@@ -267,53 +264,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
     @action(
-        detail=False,
-        methods=['get'],
-        permission_classes=[IsAuthenticated]
-    )
-    def download_shopping_cart(self, request):
-        user = request.user
-        shopping_cart = ShoppingCart.objects.filter(user=user).all()
-
-        ingredients_count = {}
-
-        for item in shopping_cart:
-            ingredients = item.recipe.ingredients.all()
-            for ingredient in ingredients:
-                ingredient_id = ingredient.id
-                ingredient_name = ingredient.name
-                ingredient_amount = ingredient.amount
-                if ingredient_id in ingredients_count:
-                    ingredient_data = ingredients_count[ingredient_id]
-                    ingredient_data['amount'] += ingredient_amount
-                else:
-                    ingredients_count[ingredient_id] = {
-                        'name': ingredient_name,
-                        'amount': ingredient_amount
-                    }
-
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = (
-            'attachment; filename="shopping_cart.pdf"'
-        )
-
-        p = canvas.Canvas(response, pagesize=letter)
-        p.drawString(100, 750, "Shopping Cart:")
-
-        y_position = 730
-        for ingredient in ingredients_count.values():
-            p.drawString(
-                100,
-                y_position,
-                f"{ingredient['name']}: {ingredient['amount']}"
-            )
-            y_position -= 20
-
-        p.showPage()
-        p.save()
-        return response
-
-    @action(
         detail=True,
         methods=['post', 'delete'],
         permission_classes=[IsAuthenticated]
@@ -344,3 +294,42 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(
                 {'Не найден.'}, status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
+    )
+    def download_shopping_cart(self, request):
+        user = request.user
+        shopping_cart = ShoppingCart.objects.filter(user=user).all()
+
+        ingredients_count = {}
+
+        for item in shopping_cart:
+            ingredients = item.recipe.ingredients.all()
+            for ingredient_in_recipe in ingredients:
+                ingredient_id = ingredient_in_recipe.id
+                ingredient_name = ingredient_in_recipe.name
+                ingredient_amount = ingredient_in_recipe.amount
+
+                if ingredient_id in ingredients_count:
+                    ingredients_count[ingredient_id]['amount'] += (
+                        ingredient_amount
+                    )
+                else:
+                    ingredients_count[ingredient_id] = {
+                        'name': ingredient_name,
+                        'amount': ingredient_amount
+                    }
+
+        response = HttpResponse(content_type='text/plain')
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_cart.txt"'
+        )
+        response.write("Shopping Cart:\\n")
+
+        for ingredient in ingredients_count.values():
+            response.write(f"{ingredient['name']}: {ingredient['amount']}\\n")
+
+        return response

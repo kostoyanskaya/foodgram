@@ -262,10 +262,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        self.context.get('request').user
         if instance.author != self.context.get('request').user:
             raise PermissionDenied("Только автор рецепта может его обновить.")
-
         ingredients_data = validated_data.pop('ingredient_recipe', [])
         tags_data = validated_data.pop('tags', [])
 
@@ -277,11 +275,14 @@ class RecipeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Поле tags не должно быть пустым."
             )
-
-        instance.ingredients.all().delete()
         instance.tags.clear()
         instance.tags.set(tags_data)
 
+        for ingredient in ingredients_data:
+            IngredientInRecipe.objects.filter(
+                recipe=instance,
+                ingredient=ingredient['ingredient']['id']
+            ).delete()
         IngredientInRecipe.objects.bulk_create(
             IngredientInRecipe(
                 recipe=instance,
@@ -290,5 +291,6 @@ class RecipeSerializer(serializers.ModelSerializer):
             )
             for ingredient in ingredients_data
         )
+        instance.save()
 
-        return super().update(instance, validated_data)
+        return instance
