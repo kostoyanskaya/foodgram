@@ -295,7 +295,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(
                 {'Не найден.'}, status=status.HTTP_400_BAD_REQUEST
             )
-        
+
     @action(
         detail=False,
         methods=['get'],
@@ -306,7 +306,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'recipe__ingredientinrecipe__ingredient'
         ).annotate(
             ingredient_name=F('recipe__ingredientinrecipe__ingredient__name'),
-            ingredient_unit=F('recipe__ingredientinrecipe__ingredient__measurement_unit'),
+            ingredient_unit=F(
+                'recipe__ingredientinrecipe__'
+                'ingredient__measurement_unit'
+            ),
             total_amount=Sum('recipe__ingredientinrecipe__amount')
         ).values(
             'ingredient_name', 'ingredient_unit', 'total_amount'
@@ -318,11 +321,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             response_content,
             content_type='text/plain; charset=utf-8'
         )
-        
+
         response['Content-Disposition'] = (
             'attachment; filename="shopping_cart.txt"'
         )
-        
+
         return response
 
     def shopping_list(self, ingredients):
@@ -336,6 +339,5 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'Купить:',
             *info
         ])
-        
-        return shopping_list
 
+        return shopping_list
