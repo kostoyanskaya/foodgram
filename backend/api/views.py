@@ -302,42 +302,37 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def download_shopping_cart(self, request):
-        cart = request.user.shoppingcarts.prefetch_related(
+        cart = request.user.shoppingcart_set.prefetch_related(
             'recipe__ingredientinrecipe__ingredient'
         ).annotate(
             ingredient_name=F('recipe__ingredientinrecipe__ingredient__name'),
             ingredient_unit=F(
-                'recipe__ingredientinrecipe__'
-                'ingredient__measurement_unit'
+                'recipe__ingredientinrecipe__ingredient__measurement_unit'
             ),
             total_amount=Sum('recipe__ingredientinrecipe__amount')
-        ).values(
-            'ingredient_name', 'ingredient_unit', 'total_amount'
-        )
+        ).values('ingredient_name', 'ingredient_unit', 'total_amount')
 
-        response_content = self.shopping_list(cart)
+        if not cart.exists():
+            return Response({'Корзина пуста.'}, status=status.HTTP_200_OK)
+
+        response_content = self.generate_shopping_list(cart)
 
         response = HttpResponse(
             response_content,
             content_type='text/plain; charset=utf-8'
         )
-
         response['Content-Disposition'] = (
             'attachment; filename="shopping_cart.txt"'
         )
 
         return response
 
-    def shopping_list(self, ingredients):
+    def generate_shopping_list(self, ingredients):
         info = [
-            f'{ingredient["ingredient_name"].capitalize()} - '
-            f'{ingredient["total_amount"]} ({ingredient["ingredient_unit"]})'
-            for i, ingredient in enumerate(ingredients)
+            f"{ingredient['ingredient_name'].capitalize()} - "
+            f"{ingredient['total_amount']} ({ingredient['ingredient_unit']})"
+            for ingredient in ingredients
         ]
 
-        shopping_list = '\n'.join([
-            'Купить:',
-            *info
-        ])
-
+        shopping_list = "\n".join(["Купить:", *info])
         return shopping_list
