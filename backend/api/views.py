@@ -1,3 +1,4 @@
+from django.db.models import Sum
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
@@ -20,7 +21,7 @@ from .serializers import (
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Follow
 
-SITE_URL = 'http://foodgramdelicious.ddnsking.com'
+SITE_URL = 'foodgramdelicious.ddnsking.com'
 
 User = get_user_model()
 
@@ -300,31 +301,42 @@ class RecipeViewSet(viewsets.ModelViewSet):
         methods=['get'],
         permission_classes=[IsAuthenticated]
     )
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
+    )
     def download_shopping_cart(self, request):
-        user = request.user
-        shopping_cart = ShoppingCart.objects.filter(user=user).all()
-        ingredients_count = {}
-        for item in shopping_cart:
-            ingredients = item.recipe.ingredients.all()
-            for ingredient_in_recipe in ingredients:
-                ingredient_id = ingredient_in_recipe.id
-                ingredient_name = ingredient_in_recipe.name
-                ingredient_amount = ingredient_in_recipe.amount
-                if ingredient_id in ingredients_count:
-                    ingredients_count[ingredient_id]['amount'] += (
-                        ingredient_amount
-                    )
-                else:
-                    ingredients_count[ingredient_id] = {
-                        'name': ingredient_name,
-                        'amount': ingredient_amount
-                    }
-        response = HttpResponse(content_type='text/plain')
+        cart = ShoppingCart.objects.filter(user=request.user).prefetch_related(
+            'recipe__ingredients'
+        ).annotate(
+            total_amount=Sum('recipe__ingredients__amount')
+        ).values(
+            'recipe__ingredients__name',
+            'recipe__ingredients__measurement_unit',
+            'total_amount'
+        )
+
+        if not cart:
+            return Response(
+                {'detail': 'Корзина пуста.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        shopping_cart_contents = "Shopping List:\n"
+        for item in cart:
+            shopping_cart_contents += (
+                f"{item['recipe__ingredients__name']}: "
+                f"{item['total_amount']} "
+                f"{item['recipe__ingredients__measurement_unit']}\n"
+            )
+
+        response = HttpResponse(
+            shopping_cart_contents,
+            content_type='text/plain; charset=utf-8'
+        )
         response['Content-Disposition'] = (
             'attachment; filename="shopping_cart.txt"'
         )
-        response.write("Shopping Cart:\\n")
-        for ingredient in ingredients_count.values():
-            response.write(f"{ingredient['name']}: {ingredient['amount']}\\n")
 
         return response

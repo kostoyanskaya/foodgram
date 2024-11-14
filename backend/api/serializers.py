@@ -293,4 +293,4 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
         instance.save()
 
-        return instance
+        return super().update(instance, validated_data)
