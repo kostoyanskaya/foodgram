@@ -171,7 +171,7 @@ class UserViewSet(DjoserUserViewSet):
 
 
 class TagViewSet(viewsets.ModelViewSet):
-    """ViewSet для работы с объектами модели Tag."""
+    """ViewSet для работы с объектами модели Tag"""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [AllowAny]
