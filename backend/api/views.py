@@ -1,5 +1,5 @@
 import io
-from django.db.models import F, Sum
+from django.db.models import Sum
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse
@@ -306,33 +306,36 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def downloadshoppingcart(self, request):
         cart = ShoppingCart.objects.filter(user=request.user).prefetch_related(
             'recipe__ingredient_recipe'
-        ).annotate(
-            ingredient_name=F('recipe__ingredient_recipe__ingredient__name'),
-            ingredient_unit=F(
-                'recipe__ingredient_recipe__ingredient__measurement_unit'
-            ),
-            total_amount=Sum('recipe__ingredient_recipe__amount')
         ).values(
-            'recipe__id',
-            'ingredient_name',
-            'ingredient_unit',
-            'total_amount'
+            'recipe__ingredient_recipe__ingredient__name',
+            'recipe__ingredient_recipe__ingredient__measurement_unit'
+        ).annotate(
+            total_amount=Sum('recipe__ingredient_recipe__amount')
         )
 
-        ingredients_info = [
-            f'{i}. {ingredient["ingredient_name"].capitalize()} - '
-            f'{ingredient["total_amount"]} ({ingredient["ingredient_unit"]})'
-            for i, ingredient in enumerate(cart, start=1)
-        ]
+        ingredients_info = []
+        for i, ingredient in enumerate(cart, start=1):
+            title = ingredient["recipe__ingredient_recipe__ingredient__name"]
+            name = title.capitalize()
+            total_amount = ingredient["total_amount"]
+            key = "recipe__ingredient_recipe__ingredient__measurement_unit"
+            measurement_unit = ingredient[key]
+            ingredients_info.append(
+                f'{i}. {name} - {total_amount} ({measurement_unit})'
+            )
+            ingredients_info.append(
+                f'{i}. {name} - {total_amount} ({measurement_unit})'
+            )
 
         shopping_list = '\n'.join([
             'Список ингредиентов:',
             *ingredients_info
         ])
 
+        # Создаем объект BytesIO, чтобы передать как файл
         buffer = io.BytesIO()
         buffer.write(shopping_list.encode('utf-8'))
-        buffer.seek(0)
+        buffer.seek(0)  # Перемещаем указатель в начало буфера
 
         response = FileResponse(
             buffer,
