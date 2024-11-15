@@ -303,7 +303,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path='download_shopping_cart',
         permission_classes=[IsAuthenticated]
     )
-    def downloadshoppingcart(self, request):
+    def download_shopping_cart(self, request):
         cart = ShoppingCart.objects.filter(user=request.user).prefetch_related(
             'recipe__ingredient_recipe'
         ).values(
@@ -332,10 +332,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             *ingredients_info
         ])
 
-        # Создаем объект BytesIO, чтобы передать как файл
         buffer = io.BytesIO()
         buffer.write(shopping_list.encode('utf-8'))
-        buffer.seek(0)  # Перемещаем указатель в начало буфера
+        buffer.seek(0)
 
         response = FileResponse(
             buffer,
