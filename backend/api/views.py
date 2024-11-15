@@ -1,3 +1,4 @@
+import io
 from django.db.models import F, Sum
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
@@ -302,15 +303,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path='download_shopping_cart',
         permission_classes=[IsAuthenticated]
     )
-    def download_shopping_cart(self, request):
-        cart = request.user.shoppingcarts.prefetch_related(
-            'recipe__recipeingredients__ingredient'
+    def downloadshoppingcart(self, request):
+        cart = ShoppingCart.objects.filter(user=request.user).prefetch_related(
+            'recipe__ingredient_recipe'
         ).annotate(
-            ingredient_name=F('recipe__recipeingredients__ingredient__name'),
+            ingredient_name=F('recipe__ingredient_recipe__ingredient__name'),
             ingredient_unit=F(
-                'recipe__recipeingredients__ingredient__measurement_unit'
+                'recipe__ingredient_recipe__ingredient__measurement_unit'
             ),
-            total_amount=Sum('recipe__recipeingredients__amount')
+            total_amount=Sum('recipe__ingredient_recipe__amount')
         ).values(
             'recipe__id',
             'ingredient_name',
@@ -323,12 +324,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
             f'{ingredient["total_amount"]} ({ingredient["ingredient_unit"]})'
             for i, ingredient in enumerate(cart, start=1)
         ]
-        shopping_list = '\\n'.join([
+
+        shopping_list = '\n'.join([
             'Список ингредиентов:',
             *ingredients_info
         ])
+
+        buffer = io.BytesIO()
+        buffer.write(shopping_list.encode('utf-8'))
+        buffer.seek(0)
+
         response = FileResponse(
-            content=shopping_list,
+            buffer,
             content_type='text/plain; charset=utf-8'
         )
         response['Content-Disposition'] = (
