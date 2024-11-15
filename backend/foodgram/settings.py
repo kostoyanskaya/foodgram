@@ -7,16 +7,11 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 SECRET_KEY = os.getenv('SECRET_KEY', 'my_key')
-
 
 DEBUG = False
 
 ALLOWED_HOSTS = ['51.250.105.199', 'localhost', '127.0.0.1', 'foodgramdelicious.ddnsking.com']
-
-
-
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -64,7 +59,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodgram.wsgi.application'
 
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -75,7 +69,6 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', 5432)
     }
 }
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -92,7 +85,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 LANGUAGE_CODE = 'ru-RU'
 
 TIME_ZONE = 'UTC'
@@ -105,13 +97,11 @@ USE_TZ = True
 
 AUTH_USER_MODEL = 'users.User'
 
-
 STATIC_URL = '/static/'
 STATIC_ROOT = 'backend_static/static/'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
-
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -126,7 +116,6 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 6,
 }
-
 
 DJOSER = {
     'LOGIN_FIELD': 'email',

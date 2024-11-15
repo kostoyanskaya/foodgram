@@ -3,7 +3,6 @@ import base64
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.files.base import ContentFile
-from drf_extra_fields.fields import Base64ImageField
 from djoser.serializers import UserCreateSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
