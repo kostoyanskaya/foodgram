@@ -1,7 +1,7 @@
-from django.db.models import Sum, F
+from django.db.models import F, Sum
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import HttpResponse
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status, viewsets
@@ -299,40 +299,39 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(
         detail=False,
         methods=['get'],
+        url_path='download_shopping_cart',
         permission_classes=[IsAuthenticated]
     )
     def download_shopping_cart(self, request):
-        cart = request.user.shoppingcart_set.prefetch_related(
-            'recipe__ingredientinrecipe__ingredient'
+        cart = request.user.shoppingcarts.prefetch_related(
+            'recipe__recipeingredients__ingredient'
         ).annotate(
-            ingredient_name=F('recipe__ingredientinrecipe__ingredient__name'),
+            ingredient_name=F('recipe__recipeingredients__ingredient__name'),
             ingredient_unit=F(
-                'recipe__ingredientinrecipe__ingredient__measurement_unit'
+                'recipe__recipeingredients__ingredient__measurement_unit'
             ),
-            total_amount=Sum('recipe__ingredientinrecipe__amount')
-        ).values('ingredient_name', 'ingredient_unit', 'total_amount')
+            total_amount=Sum('recipe__recipeingredients__amount')
+        ).values(
+            'recipe__id',
+            'ingredient_name',
+            'ingredient_unit',
+            'total_amount'
+        )
 
-        if not cart.exists():
-            return Response({'Корзина пуста.'}, status=status.HTTP_200_OK)
-
-        response_content = self.generate_shopping_list(cart)
-
-        response = HttpResponse(
-            response_content,
+        ingredients_info = [
+            f'{i}. {ingredient["ingredient_name"].capitalize()} - '
+            f'{ingredient["total_amount"]} ({ingredient["ingredient_unit"]})'
+            for i, ingredient in enumerate(cart, start=1)
+        ]
+        shopping_list = '\\n'.join([
+            'Список ингредиентов:',
+            *ingredients_info
+        ])
+        response = FileResponse(
+            content=shopping_list,
             content_type='text/plain; charset=utf-8'
         )
         response['Content-Disposition'] = (
             'attachment; filename="shopping_cart.txt"'
         )
-
         return response
-
-    def generate_shopping_list(self, ingredients):
-        info = [
-            f"{ingredient['ingredient_name'].capitalize()} - "
-            f"{ingredient['total_amount']} ({ingredient['ingredient_unit']})"
-            for ingredient in ingredients
-        ]
-
-        shopping_list = "\n".join(["Купить:", *info])
-        return shopping_list
