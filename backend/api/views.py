@@ -1,5 +1,6 @@
 import io
-from django.db.models import Sum
+from collections import defaultdict
+
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse
@@ -303,37 +304,34 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path='download_shopping_cart',
         permission_classes=[IsAuthenticated]
     )
-    def download_shopping_cart(self, request):
+    def downloadshoppingcart(self, request):
         cart = ShoppingCart.objects.filter(user=request.user).prefetch_related(
-            'recipe__ingredient_recipe'
-        ).values(
-            'recipe__ingredient_recipe__ingredient__name',
-            'recipe__ingredient_recipe__ingredient__measurement_unit'
-        ).annotate(
-            total_amount=Sum('recipe__ingredient_recipe__amount')
+            'recipeingredientrecipe'
+        ).values_list(
+            'recipeingredientrecipe__ingredient__name',
+            'recipeingredientrecipe__ingredient__measurement_unit',
+            'recipeingredientrecipe__amount'
         )
 
-        ingredients_info = []
-        for i, ingredient in enumerate(cart, start=1):
-            title = ingredient["recipe__ingredient_recipe__ingredient__name"]
-            name = title.capitalize()
-            total_amount = ingredient["total_amount"]
-            key = "recipe__ingredient_recipe__ingredient__measurement_unit"
-            measurement_unit = ingredient[key]
-            ingredients_info.append(
-                f'{i}. {name} - {total_amount} ({measurement_unit})'
-            )
-            ingredients_info.append(
-                f'{i}. {name} - {total_amount} ({measurement_unit})'
-            )
+        ingredients_summary = defaultdict(lambda: {"total": 0, "unit": ""})
 
-        shopping_list = '\n'.join([
+        for ingredient_name, ingredient_unit, amount in cart:
+            ingredients_summary[ingredient_name]["total"] += amount
+            ingredients_summary[ingredient_name]["unit"] = ingredient_unit
+
+        ingredientsinfo = [
+            f'{i}. {name.capitalize()} - {info["total"]} ({info["unit"]})'
+            for i, (name, info) in enumerate(
+                ingredients_summary.items(), start=1
+            )
+        ]
+
+        shoppinglist = '\n'.join([
             'Список ингредиентов:',
-            *ingredients_info
+            *ingredientsinfo
         ])
-
         buffer = io.BytesIO()
-        buffer.write(shopping_list.encode('utf-8'))
+        buffer.write(shoppinglist.encode('utf-8'))
         buffer.seek(0)
 
         response = FileResponse(
@@ -341,6 +339,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             content_type='text/plain; charset=utf-8'
         )
         response['Content-Disposition'] = (
-            'attachment; filename="shopping_cart.txt"'
+            'attachment; filename="shoppingcart.txt"'
         )
         return response
