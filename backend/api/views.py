@@ -19,7 +19,7 @@ from .paginations import LimitPagination
 from .serializers import (
     AvatarSerializer, IngredientSerializer, RecipeMinifiedSerializer,
     RecipeSerializer, TagSerializer, UserDetailSerializer,
-    UserRegistrationSerializer, UserWithRecipesSerializer
+    UserWithRecipesSerializer
 )
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Follow
@@ -39,12 +39,6 @@ class UserViewSet(DjoserUserViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         return queryset
-
-    def create(self, request, *args, **kwargs):
-        serializer = UserRegistrationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(
         detail=False,
@@ -110,6 +104,7 @@ class UserViewSet(DjoserUserViewSet):
             ).data
             response_data['recipes_count'] = recipes_count
             response_data['recipes'] = recipes_data
+            response_data['is_subscribed'] = True
 
             results.append(response_data)
 
@@ -125,52 +120,67 @@ class UserViewSet(DjoserUserViewSet):
         methods=['post', 'delete'],
         permission_classes=[IsAuthenticated]
     )
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated]
+    )
     def subscribe(self, request, id=None):
         author = get_object_or_404(User, pk=id)
 
         if author == request.user:
             return Response(
-                {'Cannot subscribe.'}, status=status.HTTP_400_BAD_REQUEST
+                {'detail': 'Cannot subscribe to yourself.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         if request.method == 'POST':
             follow, created = Follow.objects.get_or_create(
-                user=request.user, author=author
+                user=request.user,
+                author=author
             )
             if created:
                 recipes_limit = request.query_params.get('recipes_limit', None)
                 recipes = Recipe.objects.filter(author=author)
                 if recipes_limit is not None:
                     recipes = recipes[:int(recipes_limit)]
-
                 recipes_count = recipes.count()
                 recipes_data = RecipeMinifiedSerializer(
-                    recipes, many=True, context={'request': request}
+                    recipes,
+                    many=True,
+                    context={'request': request}
                 ).data
 
                 response_data = UserWithRecipesSerializer(
-                    author, context={'request': request}
+                    author,
+                    context={'request': request}
                 ).data
                 response_data['recipes_count'] = recipes_count
                 response_data['recipes'] = recipes_data
+                response_data['is_subscribed'] = True
 
                 return Response(
-                    response_data, status=status.HTTP_201_CREATED
+                    response_data,
+                    status=status.HTTP_201_CREATED
                 )
 
             return Response(
-                {'Уже подписан.'}, status=status.HTTP_400_BAD_REQUEST
+                {'Уже подписался.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         elif request.method == 'DELETE':
             follow = Follow.objects.filter(
-                user=request.user, author=author
+                user=request.user,
+                author=author
             ).first()
             if follow:
                 follow.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
+
             return Response(
-                {'Subscription not found.'}, status=status.HTTP_400_BAD_REQUEST
+                {'detail': 'Subscription not found.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
 
@@ -333,10 +343,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             ) in enumerate(ingredients_summary.items())
         ]
 
-        shopping_list = '\\n'.join([
-            'Список ингредиентов:',
-            *ingredients_info
-        ])
+        shopping_list = 'Список ингредиентов:\n' + '\n'.join(ingredients_info)
 
         buffer = io.BytesIO()
         buffer.write(shopping_list.encode('utf-8'))

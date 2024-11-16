@@ -3,7 +3,6 @@ import base64
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.files.base import ContentFile
-from djoser.serializers import UserCreateSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
@@ -37,23 +36,9 @@ class Base64ImageField(serializers.ImageField):
         return super().to_internal_value(data)
 
 
-class UserRegistrationSerializer(UserCreateSerializer):
-    """Сериализатор для создания пользователя."""
-
-    class Meta(UserCreateSerializer.Meta):
-        fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'password',
-        )
-        read_only_fields = ('id',)
-
-
 class UserDetailSerializer(serializers.ModelSerializer):
     avatar = Base64ImageField(required=False, allow_null=True)
+    is_subscribed = serializers.SerializerMethodField()
     """Сериализатор для получения информации о пользователе"""
 
     class Meta:
@@ -67,6 +52,14 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'is_subscribed',
             'avatar',
         )
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Follow.objects.filter(
+                user=request.user, author=obj
+            ).exists()
+        return False
 
 
 class FollowSerializer(serializers.ModelSerializer):

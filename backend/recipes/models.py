@@ -41,13 +41,12 @@ class Recipe(models.Model):
         Ingredient,
         verbose_name='Ингредиенты',
         related_name='recipes',
-        blank=False,
     )
     name = models.CharField(max_length=256, verbose_name='Название рецепта')
     text = models.TextField(verbose_name='Описание рецепта')
     cooking_time = models.PositiveIntegerField(validators=(
-        MinValueValidator(1, message='Одна минута'),
-        MaxValueValidator(1000),
+        MinValueValidator(1, message='Время должно быть больше 0'),
+        MaxValueValidator(1000, message='Время должно быть больше 0'),
     ), verbose_name='Время приготовления')
     image = models.ImageField(upload_to='recipes/', verbose_name='Изображение')
     tags = models.ManyToManyField(Tag, verbose_name='Теги')

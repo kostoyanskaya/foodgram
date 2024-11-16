@@ -27,16 +27,14 @@ class User(AbstractUser):
         max_length=150,
         blank=False
     )
-    is_subscribed = models.BooleanField(
-        verbose_name='Подписка',
-        default=False
-    )
     avatar = models.ImageField(
         upload_to='users/',
         verbose_name='Аватар',
         blank=True,
         null=True
     )
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
     class Meta:
         verbose_name = 'Пользователь'

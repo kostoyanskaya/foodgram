@@ -1,14 +1,19 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
-from .models import User
+from .models import User, Follow
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(BaseUserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
-    list_display_links = ('username',)
     search_fields = ('username', 'email')
+
+
+@admin.register(Follow)
+class FollowAdmin(admin.ModelAdmin):
+    list_display = ('user', 'author')
 
 
 @admin.register(Recipe)
