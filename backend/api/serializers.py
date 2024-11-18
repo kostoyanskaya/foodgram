@@ -211,37 +211,9 @@ class RecipeSerializer(serializers.ModelSerializer):
             user=request.user, recipe=obj
         ).exists()
 
-    def validate(self, data):
-        ingredients = data.get('ingredient_recipe', [])
-        self.validate_ingredients(ingredients)
-        if not data.get('name'):
-            raise ValidationError({"name": ["Имя рецепта обязательно."]})
-        if not data.get('cooking_time'):
-            raise ValidationError(
-                {"cooking_time": ["Время приготовления обязательно"]}
-            )
-
-        return data
-
-    def validate_ingredients(self, value):
-        if not value:
-            raise serializers.ValidationError(
-                {"ingredients": ["Ингредиент не выбран."]}
-            )
-        ingredient_ids = []
-        for ingredient in value:
-            amount = ingredient.get('amount')
-            if amount is not None and amount < 1:
-                raise serializers.ValidationError(
-                    {"ingredients": ["Количество должно быть больше 0."]}
-                )
-            ingredient_ids.append(ingredient['ingredient']['id'])
-        if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError(
-                {"ingredients": ["Ингредиенты не должны повторяться."]}
-            )
-
-        return value
+    def validate(self, value):
+        if not value.get('ingredient_recipe'):
+            raise serializers.ValidationError('Добавьте хоть один ингредиент')
 
     def validate_tags(self, value):
         return validate_tags(value)
