@@ -218,7 +218,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             raise ValidationError({"name": ["Имя рецепта обязательно."]})
         if not data.get('cooking_time'):
             raise ValidationError(
-                {"cooking_time": ["Время приготовления обязательно."]}
+                {"cooking_time": ["Время приготовления обязательно"]}
             )
 
         return data
