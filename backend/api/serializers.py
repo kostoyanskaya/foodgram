@@ -212,31 +212,34 @@ class RecipeSerializer(serializers.ModelSerializer):
         ).exists()
 
     def validate(self, data):
-        # Valida ingredientes
         ingredients = data.get('ingredient_recipe', [])
         self.validate_ingredients(ingredients)
-
-        # Проверка других обязательных полей (если необходимо, добавьте здесь)
         if not data.get('name'):
-            raise ValidationError("Имя рецепта обязательно.")
+            raise ValidationError({"name": ["Имя рецепта обязательно."]})
         if not data.get('cooking_time'):
-            raise ValidationError("Время приготовления обязательно.")
+            raise ValidationError(
+                {"cooking_time": ["Время приготовления обязательно."]}
+            )
+
         return data
 
     def validate_ingredients(self, value):
         if not value:
-            raise serializers.ValidationError("Ингредиент не выбран.")
-
+            raise serializers.ValidationError(
+                {"ingredients": ["Ингредиент не выбран."]}
+            )
         ingredient_ids = []
         for ingredient in value:
             amount = ingredient.get('amount')
             if amount is not None and amount < 1:
                 raise serializers.ValidationError(
-                    "Количество ингредиента должно быть больше 0.")
+                    {"ingredients": ["Количество должно быть больше 0."]}
+                )
             ingredient_ids.append(ingredient['ingredient']['id'])
         if len(ingredient_ids) != len(set(ingredient_ids)):
             raise serializers.ValidationError(
-                "Ингредиенты не должны повторяться.")
+                {"ingredients": ["Ингредиенты не должны повторяться."]}
+            )
 
         return value
 
