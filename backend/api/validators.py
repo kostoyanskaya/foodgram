@@ -9,9 +9,10 @@ def validate_tags(value):
     return value
 
 
-def validate_ingredients(value):
-    if not value:
-        raise serializers.ValidationError("Добавьте хотя бы один ингредиент.")
+def validate_ingredients(self, value):
+    if not value or (isinstance(value, list) and len(value) == 0):
+        raise serializers.ValidationError("Ингредиент не выбран.")
+
     ingredient_ids = []
     for ingredient in value:
         if ingredient['amount'] < 1:
