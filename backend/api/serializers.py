@@ -211,6 +211,14 @@ class RecipeSerializer(serializers.ModelSerializer):
             user=request.user, recipe=obj
         ).exists()
 
+    def validate(self, value):
+        if not value.get('ingredient_recipe'):
+            raise serializers.ValidationError('Добавьте ингредиент')
+        ingredients = value.get('ingredient_recipe', [])
+        if not ingredients:
+            raise serializers.ValidationError(
+                'Добавьте хотя бы один ингредиент.')
+
     def validate_tags(self, value):
         return validate_tags(value)
 
