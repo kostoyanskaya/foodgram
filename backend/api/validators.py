@@ -10,7 +10,7 @@ def validate_tags(value):
 
 
 def validate_ingredients(self, value):
-    if not value or (isinstance(value, list) and len(value) == 0):
+    if not value:
         raise serializers.ValidationError("Ингредиент не выбран.")
 
     ingredient_ids = []

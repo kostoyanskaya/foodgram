@@ -6,7 +6,7 @@ from django.core.files.base import ContentFile
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
-from .validators import validate_ingredients, validate_tags
+from .validators import validate_tags
 from recipes.models import (
     Favorite,
     Ingredient,
@@ -211,19 +211,37 @@ class RecipeSerializer(serializers.ModelSerializer):
             user=request.user, recipe=obj
         ).exists()
 
-    def validate(self, value):
-        if not value.get('ingredient_recipe'):
-            raise serializers.ValidationError('Добавьте ингредиент')
-        ingredients = value.get('ingredient_recipe', [])
-        if not ingredients:
+    def validate(self, data):
+        # Valida ingredientes
+        ingredients = data.get('ingredient_recipe', [])
+        self.validate_ingredients(ingredients)
+
+        # Проверка других обязательных полей (если необходимо, добавьте здесь)
+        if not data.get('name'):
+            raise ValidationError("Имя рецепта обязательно.")
+        if not data.get('cooking_time'):
+            raise ValidationError("Время приготовления обязательно.")
+        return data
+
+    def validate_ingredients(self, value):
+        if not value:
+            raise serializers.ValidationError("Ингредиент не выбран.")
+
+        ingredient_ids = []
+        for ingredient in value:
+            amount = ingredient.get('amount')
+            if amount is not None and amount < 1:
+                raise serializers.ValidationError(
+                    "Количество ингредиента должно быть больше 0.")
+            ingredient_ids.append(ingredient['ingredient']['id'])
+        if len(ingredient_ids) != len(set(ingredient_ids)):
             raise serializers.ValidationError(
-                'Добавьте хотя бы один ингредиент.')
+                "Ингредиенты не должны повторяться.")
+
+        return value
 
     def validate_tags(self, value):
         return validate_tags(value)
-
-    def validate_ingredients(self, value):
-        return validate_ingredients(value)
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
