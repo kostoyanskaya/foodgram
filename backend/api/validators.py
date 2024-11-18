@@ -11,10 +11,7 @@ def validate_tags(value):
 
 def validate_ingredients(value):
     if not value:
-        raise serializers.ValidationError(
-            "Поле ingredients не должно быть пустым."
-        )
-
+        raise serializers.ValidationError("Добавьте хотя бы один ингредиент.")
     ingredient_ids = []
     for ingredient in value:
         if ingredient['amount'] < 1:

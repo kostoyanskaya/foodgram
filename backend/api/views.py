@@ -93,7 +93,6 @@ class UserViewSet(DjoserUserViewSet):
             recipes = Recipe.objects.filter(author=author)
             if recipes_limit is not None:
                 recipes = recipes[:int(recipes_limit)]
-
             recipes_count = recipes.count()
             recipes_data = RecipeMinifiedSerializer(
                 recipes, many=True, context={'request': request}
@@ -115,11 +114,6 @@ class UserViewSet(DjoserUserViewSet):
 
         return Response({'count': len(results), 'results': results})
 
-    @action(
-        detail=True,
-        methods=['post', 'delete'],
-        permission_classes=[IsAuthenticated]
-    )
     @action(
         detail=True,
         methods=['post', 'delete'],

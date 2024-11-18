@@ -172,9 +172,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-    ingredients = IngredientInRecipeSerializer(
-        many=True, source='ingredient_recipe'
-    )
+    ingredients = IngredientInRecipeSerializer(many=True, required=False, allow_empty=True, source='ingredient_recipe')
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True
     )
@@ -195,11 +193,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('email', 'username', 'first_name', 'last_name')
 
-        extra_kwargs = {
-            'ingredients': {'required': True, 'allow_empty': False},
-            'tags': {'required': True, 'allow_empty': False},
-        }
-
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if isinstance(request.user, AnonymousUser):
@@ -215,6 +208,12 @@ class RecipeSerializer(serializers.ModelSerializer):
         return ShoppingCart.objects.filter(
             user=request.user, recipe=obj
         ).exists()
+    
+    def validate_tags(self, value):
+        return validate_tags(value)
+
+    def validate_ingredients(self, value):
+        return validate_ingredients(value)
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -223,14 +222,10 @@ class RecipeSerializer(serializers.ModelSerializer):
         ).data
         return representation
 
-    def validate_tags(self, value):
-        return validate_tags(value)
-
-    def validate_ingredients(self, value):
-        return validate_ingredients(value)
-
     def create(self, validated_data):
-        ingredients_data = validated_data.pop('ingredient_recipe')
+        ingredients_data = validated_data.pop('ingredient_recipe', [])
+        self.validate_ingredients(ingredients_data)
+
         tags_data = validated_data.pop('tags')
         user = self.context.get('request').user
 
@@ -259,10 +254,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         ingredients_data = validated_data.pop('ingredient_recipe', [])
         tags_data = validated_data.pop('tags', [])
 
-        if not ingredients_data:
-            raise serializers.ValidationError(
-                "Поле ingredients не должно быть пустым."
-            )
+        self.validate_ingredients(ingredients_data)
         if not tags_data:
             raise serializers.ValidationError(
                 "Поле tags не должно быть пустым."
