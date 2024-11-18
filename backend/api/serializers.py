@@ -172,7 +172,9 @@ class RecipeSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-    ingredients = IngredientInRecipeSerializer(many=True, required=False, allow_empty=True, source='ingredient_recipe')
+    ingredients = IngredientInRecipeSerializer(
+        many=True, required=False, allow_empty=True, source='ingredient_recipe'
+    )
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True
     )
@@ -208,7 +210,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         return ShoppingCart.objects.filter(
             user=request.user, recipe=obj
         ).exists()
-    
+
     def validate_tags(self, value):
         return validate_tags(value)
 
