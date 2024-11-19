@@ -105,7 +105,7 @@ class UserViewSet(DjoserUserViewSet):
                 author,
                 context={'request': request}
             ).data
-            
+
             response_data['recipes_count'] = recipes.count()
             response_data['recipes'] = recipes_data
             response_data['is_subscribed'] = True
