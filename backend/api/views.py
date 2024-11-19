@@ -87,12 +87,12 @@ class UserViewSet(DjoserUserViewSet):
         authors = [follow.author for follow in following]
 
         results = []
-        recipes_limit = request.query_params.get('recipes_limit', '')
+        recipes_limit = request.query_params.get('recipes_limit')
 
         for author in authors:
-            recipes = Recipe.objects.filter(author=author)
+            recipes = author.recipes.all()
 
-            if recipes_limit:
+            if recipes_limit and recipes_limit.isdigit():
                 recipes = recipes[:int(recipes_limit)]
 
             recipes_data = RecipeMinifiedSerializer(
@@ -105,7 +105,7 @@ class UserViewSet(DjoserUserViewSet):
                 author,
                 context={'request': request}
             ).data
-
+            
             response_data['recipes_count'] = recipes.count()
             response_data['recipes'] = recipes_data
             response_data['is_subscribed'] = True
