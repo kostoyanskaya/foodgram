@@ -83,18 +83,22 @@ class UserViewSet(DjoserUserViewSet):
     )
     def subscriptions(self, request):
         user = request.user
+        # Получаем всех авторов, на которых подписан текущий пользователь
         following = Follow.objects.filter(user=user).select_related('author')
         authors = [follow.author for follow in following]
 
+        # Список для хранения информации для ответа
         results = []
         recipes_limit = request.query_params.get('recipes_limit', None)
 
         for author in authors:
+            # Получаем все рецепты этого автора
             recipes = Recipe.objects.filter(author=author)
 
             if recipes_limit is not None:
                 recipes = recipes[:int(recipes_limit)]
 
+            # Сериализуем рецепты для данного автора
             recipes_data = RecipeMinifiedSerializer(
                 recipes,
                 many=True,
@@ -110,6 +114,7 @@ class UserViewSet(DjoserUserViewSet):
             response_data['is_subscribed'] = True
             results.append(response_data)
 
+        # Пагинация результатов
         page = self.paginate_queryset(results)
         if page is not None:
             return self.get_paginated_response(page)
