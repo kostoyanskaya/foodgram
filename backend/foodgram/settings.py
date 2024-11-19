@@ -114,7 +114,7 @@ REST_FRAMEWORK = {
     ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 6,
+    'PAGE_SIZE': 10,
 }
 
 DJOSER = {
@@ -125,4 +125,4 @@ DJOSER = {
     },
 }
 
-DEFAULT_PAGE_SIZE = 6
+DEFAULT_PAGE_SIZE = 10

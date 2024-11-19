@@ -6,7 +6,7 @@ from django.core.files.base import ContentFile
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
-from .validators import validate_tags
+from .validators import validate_ingredients, validate_tags
 from recipes.models import (
     Favorite,
     Ingredient,
@@ -173,7 +173,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
     ingredients = IngredientInRecipeSerializer(
-        many=True, source='ingredient_recipe'
+        many=True, required=False, allow_empty=True, source='ingredient_recipe'
     )
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True
@@ -211,12 +211,11 @@ class RecipeSerializer(serializers.ModelSerializer):
             user=request.user, recipe=obj
         ).exists()
 
-    def validate(self, value):
-        if not value.get('ingredient_recipe'):
-            raise serializers.ValidationError('Добавьте хоть один ингредиент')
-
     def validate_tags(self, value):
         return validate_tags(value)
+
+    def validate_ingredients(self, value):
+        return validate_ingredients(value)
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -226,7 +225,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         return representation
 
     def create(self, validated_data):
-        ingredients_data = validated_data.pop('ingredient_recipe')
+        ingredients_data = validated_data.pop('ingredient_recipe', [])
         self.validate_ingredients(ingredients_data)
 
         tags_data = validated_data.pop('tags')

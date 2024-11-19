@@ -22,8 +22,7 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField(
-        max_length=200, verbose_name='Название ингредиента',
-        blank=True
+        max_length=200, verbose_name='Название ингредиента'
     )
     measurement_unit = models.CharField(
         max_length=200, verbose_name='Единица измерения'
@@ -41,8 +40,7 @@ class Recipe(models.Model):
     ingredients = models.ManyToManyField(
         Ingredient,
         verbose_name='Ингредиенты',
-        related_name='recipes',
-        blank=True
+        related_name='recipes'
     )
     name = models.CharField(max_length=256, verbose_name='Название рецепта')
     text = models.TextField(verbose_name='Описание рецепта')
@@ -108,8 +106,7 @@ class IngredientInRecipe(models.Model):
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
-        verbose_name='Ингредиент',
-        blank=True
+        verbose_name='Ингредиент'
     )
     amount = models.PositiveSmallIntegerField(verbose_name='Количество')
 

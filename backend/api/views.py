@@ -91,24 +91,26 @@ class UserViewSet(DjoserUserViewSet):
 
         for author in authors:
             recipes = Recipe.objects.filter(author=author)
+
             if recipes_limit is not None:
                 recipes = recipes[:int(recipes_limit)]
-            recipes_count = recipes.count()
+
             recipes_data = RecipeMinifiedSerializer(
-                recipes, many=True, context={'request': request}
+                recipes,
+                many=True,
+                context={'request': request}
             ).data
 
             response_data = UserWithRecipesSerializer(
-                author, context={'request': request}
+                author,
+                context={'request': request}
             ).data
-            response_data['recipes_count'] = recipes_count
+            response_data['recipes_count'] = recipes.count()
             response_data['recipes'] = recipes_data
             response_data['is_subscribed'] = True
-
             results.append(response_data)
 
         page = self.paginate_queryset(results)
-
         if page is not None:
             return self.get_paginated_response(page)
 
