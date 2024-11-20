@@ -98,15 +98,17 @@ class UserViewSet(DjoserUserViewSet):
                 # Получаем рецепты автора
                 recipes = author.recipes.all()
 
-                # Применяем лимит, если он указан
-                if limit:
+                if limit is None:
+                    limit_value = recipes.count()  # Общее количество рецептов
+                    recipes = recipes[:limit_value]  # Получаем все рецепты
+                else:
+                    # Применяем лимит, если он указан
                     try:
                         limit_value = int(limit)
                         recipes = recipes[:limit_value]
                     except ValueError:
                         pass  # Игнорируем неверный формат лимита
 
-                # Сериализуем данные автора и рецептов
                 serialized_author = UserWithRecipesSerializer(
                     author,
                     context={
@@ -116,10 +118,8 @@ class UserViewSet(DjoserUserViewSet):
                     }
                 )
 
-                # Добавляем данные в результат
                 results.append(serialized_author.data)
 
-            # Возвращаем пагинированный ответ
             page = self.paginate_queryset(results)
             if page is not None:
                 return self.get_paginated_response(page)
