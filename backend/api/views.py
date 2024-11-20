@@ -82,18 +82,31 @@ class UserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated]
     )
     def subscriptions(self, request):
+        # Получаем список авторов, на которых подписан текущий пользователь
         authors = User.objects.filter(following__user=request.user)
+
+        # Проверяем наличие подписчиков
         if authors.exists():
+            # Получаем параметры запроса
             limit = request.query_params.get('recipes_limit')
+
+            # Список для хранения данных
             results = []
+
+            # Проходимся по каждому автору
             for author in authors:
+                # Получаем рецепты автора
                 recipes = author.recipes.all()
+
+                # Применяем лимит, если он указан
                 if limit:
                     try:
                         limit_value = int(limit)
                         recipes = recipes[:limit_value]
                     except ValueError:
-                        pass
+                        pass  # Игнорируем неверный формат лимита
+
+                # Сериализуем данные автора и рецептов
                 serialized_author = UserWithRecipesSerializer(
                     author,
                     context={
@@ -103,7 +116,10 @@ class UserViewSet(DjoserUserViewSet):
                     }
                 )
 
+                # Добавляем данные в результат
                 results.append(serialized_author.data)
+
+            # Возвращаем пагинированный ответ
             page = self.paginate_queryset(results)
             if page is not None:
                 return self.get_paginated_response(page)
@@ -140,7 +156,7 @@ class UserViewSet(DjoserUserViewSet):
                     try:
                         recipes = recipes[:int(recipes_limit)]
                     except ValueError:
-                        pass
+                        pass  # Игнорируем неверный формат лимита
 
                 recipes_count = recipes.count()
                 RecipeMinifiedSerializer(
@@ -176,7 +192,7 @@ class UserViewSet(DjoserUserViewSet):
 
             return Response(
                 {'detail': 'Подписка не найдена'},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_404_NOT_FOUND
             )
 
 
