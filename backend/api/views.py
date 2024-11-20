@@ -18,8 +18,7 @@ from .filters import IngredientFilter, RecipeFilter
 from .paginations import LimitPagination
 from .serializers import (
     AvatarSerializer, IngredientSerializer, RecipeMinifiedSerializer,
-    RecipeSerializer, TagSerializer, UserDetailSerializer,
-    UserWithRecipesSerializer
+    RecipeSerializer, TagSerializer, UserDetailSerializer
 )
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Follow
@@ -82,53 +81,46 @@ class UserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated]
     )
     def subscriptions(self, request):
-        # Получаем список авторов, на которых подписан текущий пользователь
-        authors = User.objects.filter(following__user=request.user)
+        current_user = request.user
+        follow_list = User.objects.filter(following__user=current_user)
 
-        # Проверяем наличие подписчиков
-        if authors.exists():
-            # Получаем параметры запроса
-            limit = request.query_params.get('recipes_limit')
+        paginator = self.paginator
+        authors = paginator.paginate_queryset(follow_list, request)
 
-            # Список для хранения данных
-            results = []
+        # Используем лимит для рецептов
+        recipes_limit = request.query_params.get('recipes_limit', None)
+        recipes_limit = int(
+            recipes_limit
+        ) if recipes_limit and recipes_limit.isdigit() else None
 
-            # Проходимся по каждому автору
-            for author in authors:
-                # Получаем рецепты автора
-                recipes = author.recipes.all()
+        results = []
+        for author in authors:
+            recipes = Recipe.objects.filter(author=author)
+            if recipes_limit:
+                recipes = recipes[:recipes_limit]
+            recipes_count = recipes.count()
+            recipes_data = RecipeMinifiedSerializer(
+                recipes,
+                many=True,
+                context={'request': request}
+            ).data
 
-                if limit is None:
-                    limit_value = recipes.count()  # Общее количество рецептов
-                    recipes = recipes[:limit_value]  # Получаем все рецепты
-                else:
-                    # Применяем лимит, если он указан
-                    try:
-                        limit_value = int(limit)
-                        recipes = recipes[:limit_value]
-                    except ValueError:
-                        pass  # Игнорируем неверный формат лимита
+            # Используем проверку на существование файла аватара
+            results.append({
+                'id': author.id,
+                'username': author.username,
+                'first_name': author.first_name,
+                'last_name': author.last_name,
+                'email': author.email,
+                'avatar': author.avatar.url if author.avatar else None,
+                'is_subscribed': Follow.objects.filter(
+                    user=request.user, author=author
+                ).exists(),
+                'recipes': recipes_data,
+                'recipes_count': recipes_count,
+            })
 
-                serialized_author = UserWithRecipesSerializer(
-                    author,
-                    context={
-                        'request': request,
-                        'recipes': recipes,
-                        'recipes_count': len(recipes),
-                    }
-                )
-
-                results.append(serialized_author.data)
-
-            page = self.paginate_queryset(results)
-            if page is not None:
-                return self.get_paginated_response(page)
-            return Response(results, status=status.HTTP_200_OK)
-
-        else:
-            return Response(
-                {'Вы не подписаны.'}, status=status.HTTP_204_NO_CONTENT
-            )
+        return paginator.get_paginated_response(results)
 
     @action(
         detail=True,
@@ -140,7 +132,7 @@ class UserViewSet(DjoserUserViewSet):
 
         if author == request.user:
             return Response(
-                {'detail': 'Нельзя подписаться на самого себя.'},
+                {'detail': 'Нельзя подписаться на себя.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -155,29 +147,27 @@ class UserViewSet(DjoserUserViewSet):
                 if recipes_limit is not None:
                     try:
                         recipes = recipes[:int(recipes_limit)]
-                    except ValueError:
-                        pass  # Игнорируем неверный формат лимита
+                    except (ValueError, TypeError):
+                        pass
 
                 recipes_count = recipes.count()
-                RecipeMinifiedSerializer(
-                    recipes,
-                    many=True,
-                    context={'request': request}
-                ).data
-
-                response_data = UserWithRecipesSerializer(
-                    author,
-                    context={
-                        'request': request,
-                        'recipes': recipes,
-                        'recipes_count': recipes_count,
-                    }
-                ).data
-
+                response_data = {
+                    'id': author.id,
+                    'username': author.username,
+                    'first_name': author.first_name,
+                    'last_name': author.last_name,
+                    'email': author.email,
+                    'avatar': author.avatar.url if author.avatar else None,
+                    'is_subscribed': True,
+                    'recipes_count': recipes_count,
+                    'recipes': RecipeMinifiedSerializer(
+                        recipes, many=True
+                    ).data,
+                }
                 return Response(response_data, status=status.HTTP_201_CREATED)
 
             return Response(
-                {'Уже подписались на этого пользователя.'},
+                {'detail': 'Уже подписаны на этого пользователя.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -192,7 +182,7 @@ class UserViewSet(DjoserUserViewSet):
 
             return Response(
                 {'detail': 'Подписка не найдена'},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_400_BAD_REQUEST
             )
 
 
