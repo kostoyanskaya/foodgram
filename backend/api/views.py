@@ -82,40 +82,37 @@ class UserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated]
     )
     def subscriptions(self, request):
-        user = request.user
-        following = Follow.objects.filter(user=user).select_related('author')
-        authors = [follow.author for follow in following]
+        authors = User.objects.filter(following__user=request.user)
+        if authors.exists():
+            limit = request.query_params.get('recipes_limit')
+            results = []
+            for author in authors:
+                recipes = author.recipes.all()
+                if limit:
+                    try:
+                        limit_value = int(limit)
+                        recipes = recipes[:limit_value]
+                    except ValueError:
+                        pass
+                serialized_author = UserWithRecipesSerializer(
+                    author,
+                    context={
+                        'request': request,
+                        'recipes': recipes,
+                        'recipes_count': len(recipes),
+                    }
+                )
 
-        results = []
-        recipes_limit = request.query_params.get('recipes_limit')
+                results.append(serialized_author.data)
+            page = self.paginate_queryset(results)
+            if page is not None:
+                return self.get_paginated_response(page)
+            return Response(results, status=status.HTTP_200_OK)
 
-        for author in authors:
-            recipes = author.recipes.all()
-
-            if recipes_limit and recipes_limit.isdigit():
-                recipes = recipes[:int(recipes_limit)]
-
-            recipes_data = RecipeMinifiedSerializer(
-                recipes,
-                many=True,
-                context={'request': request}
-            ).data
-
-            response_data = UserWithRecipesSerializer(
-                author,
-                context={'request': request}
-            ).data
-
-            response_data['recipes_count'] = recipes.count()
-            response_data['recipes'] = recipes_data
-            response_data['is_subscribed'] = True
-            results.append(response_data)
-
-        page = self.paginate_queryset(results)
-        if page is not None:
-            return self.get_paginated_response(page)
-
-        return Response({'count': len(results), 'results': results})
+        else:
+            return Response(
+                {'Вы не подписаны.'}, status=status.HTTP_204_NO_CONTENT
+            )
 
     @action(
         detail=True,
@@ -127,7 +124,7 @@ class UserViewSet(DjoserUserViewSet):
 
         if author == request.user:
             return Response(
-                {'detail': 'Cannot subscribe to yourself.'},
+                {'detail': 'Нельзя подписаться на самого себя.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -140,9 +137,13 @@ class UserViewSet(DjoserUserViewSet):
                 recipes_limit = request.query_params.get('recipes_limit', None)
                 recipes = Recipe.objects.filter(author=author)
                 if recipes_limit is not None:
-                    recipes = recipes[:int(recipes_limit)]
+                    try:
+                        recipes = recipes[:int(recipes_limit)]
+                    except ValueError:
+                        pass
+
                 recipes_count = recipes.count()
-                recipes_data = RecipeMinifiedSerializer(
+                RecipeMinifiedSerializer(
                     recipes,
                     many=True,
                     context={'request': request}
@@ -150,19 +151,17 @@ class UserViewSet(DjoserUserViewSet):
 
                 response_data = UserWithRecipesSerializer(
                     author,
-                    context={'request': request}
+                    context={
+                        'request': request,
+                        'recipes': recipes,
+                        'recipes_count': recipes_count,
+                    }
                 ).data
-                response_data['recipes_count'] = recipes_count
-                response_data['recipes'] = recipes_data
-                response_data['is_subscribed'] = True
 
-                return Response(
-                    response_data,
-                    status=status.HTTP_201_CREATED
-                )
+                return Response(response_data, status=status.HTTP_201_CREATED)
 
             return Response(
-                {'Уже подписался.'},
+                {'Уже подписались на этого пользователя.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -176,7 +175,7 @@ class UserViewSet(DjoserUserViewSet):
                 return Response(status=status.HTTP_204_NO_CONTENT)
 
             return Response(
-                {'detail': 'Subscription not found'},
+                {'detail': 'Подписка не найдена'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
