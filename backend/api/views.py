@@ -249,7 +249,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     serializer.data, status=status.HTTP_201_CREATED
                 )
             return Response(
-                {'Рецепт уже добавлен'}, status=status.HTTP_400_BAD_REQUEST
+                {'Рецепт уже добавлен.'}, status=status.HTTP_400_BAD_REQUEST
             )
 
         elif request.method == 'DELETE':
