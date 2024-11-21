@@ -219,7 +219,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 favorite.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(
-                {'Рецепт не найден.'}, status=status.HTTP_400_BAD_REQUEST
+                {'Рецепт не найден'}, status=status.HTTP_400_BAD_REQUEST
             )
 
     @action(detail=True, methods=['GET'], url_path='get-link')
