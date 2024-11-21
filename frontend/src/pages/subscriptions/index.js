@@ -17,7 +17,7 @@ const SubscriptionsPage = () => {
 
   const getSubscriptions = ({ page }) => {
     api
-      .getSubscriptions({ page, recipes_limit: 10 })
+      .getSubscriptions({ page })
       .then(res => {
         setSubscriptions(res.results)
         setSubscriptionsCount(res.count)

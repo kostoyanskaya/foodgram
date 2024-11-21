@@ -89,15 +89,15 @@ class UserViewSet(DjoserUserViewSet):
 
         # Используем лимит для рецептов
         recipes_limit = request.query_params.get('recipes_limit', None)
-        recipes_limit = int(
-            recipes_limit
-        ) if recipes_limit and recipes_limit.isdigit() else None
+        if recipes_limit is None or not recipes_limit.isdigit():
+            recipes_limit = 10
+        else:
+            recipes_limit = int(recipes_limit)
 
         results = []
         for author in authors:
             recipes = Recipe.objects.filter(author=author)
-            if recipes_limit:
-                recipes = recipes[:recipes_limit]
+            recipes = recipes[:recipes_limit]  # Используем установленный лимит
             recipes_count = recipes.count()
             recipes_data = RecipeMinifiedSerializer(
                 recipes,
@@ -144,11 +144,14 @@ class UserViewSet(DjoserUserViewSet):
             if created:
                 recipes_limit = request.query_params.get('recipes_limit', None)
                 recipes = Recipe.objects.filter(author=author)
-                if recipes_limit is not None:
-                    try:
-                        recipes = recipes[:int(recipes_limit)]
-                    except (ValueError, TypeError):
-                        pass
+
+                if recipes_limit is None:
+                    recipes_limit = 10
+
+                try:
+                    recipes = recipes[:int(recipes_limit)]
+                except (ValueError, TypeError):
+                    recipes = recipes[:10]
 
                 recipes_count = recipes.count()
                 response_data = {
@@ -168,20 +171,6 @@ class UserViewSet(DjoserUserViewSet):
 
             return Response(
                 {'detail': 'Уже подписаны на этого пользователя.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        elif request.method == 'DELETE':
-            follow = Follow.objects.filter(
-                user=request.user,
-                author=author
-            ).first()
-            if follow:
-                follow.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-
-            return Response(
-                {'detail': 'Подписка не найдена'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
