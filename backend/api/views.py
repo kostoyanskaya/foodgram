@@ -97,7 +97,7 @@ class UserViewSet(DjoserUserViewSet):
         results = []
         for author in authors:
             recipes = Recipe.objects.filter(author=author)
-            recipes = recipes[:recipes_limit]  # Используем установленный лимит
+            recipes = recipes[:recipes_limit]
             recipes_count = recipes.count()
             recipes_data = RecipeMinifiedSerializer(
                 recipes,
