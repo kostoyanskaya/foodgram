@@ -1,6 +1,7 @@
 from collections import defaultdict
 import io
 
+from rest_framework import filters
 from django.contrib.auth import get_user_model
 from django.db.models import F
 from django_filters.rest_framework import DjangoFilterBackend
@@ -15,10 +16,11 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 
 from .filters import IngredientFilter, RecipeFilter
-from .paginations import LimitPagination
+from .paginations import LimitPagination, CustomLimitOffsetPagination
 from .serializers import (
     AvatarSerializer, IngredientSerializer, RecipeMinifiedSerializer,
-    RecipeSerializer, TagSerializer, UserDetailSerializer
+    RecipeSerializer, TagSerializer, UserDetailSerializer,
+    UserWithRecipesSerializer, FollowSerializer
 )
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Follow
@@ -33,11 +35,10 @@ class UserViewSet(DjoserUserViewSet):
     queryset = User.objects.all()
     serializer_class = UserDetailSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
-    pagination_class = LimitPagination
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset
+    pagination_class = CustomLimitOffsetPagination
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_fields = ('username', 'email')
+    ordering_fields = ('username', 'email')
 
     @action(
         detail=False,
@@ -81,46 +82,18 @@ class UserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated]
     )
     def subscriptions(self, request):
-        current_user = request.user
-        follow_list = User.objects.filter(following__user=current_user)
+        queryset = User.objects.filter(
+            following__user=request.user
+        ).prefetch_related('recipes').order_by('pk')
+        page = self.paginate_queryset(queryset)
 
-        paginator = self.paginator
-        authors = paginator.paginate_queryset(follow_list, request)
+        serializer = UserWithRecipesSerializer(
+            page,
+            many=True,
+            context={'request': request}
+        )
 
-        # Используем лимит для рецептов
-        recipes_limit = request.query_params.get('recipes_limit', None)
-        if recipes_limit is None or not recipes_limit.isdigit():
-            recipes_limit = 10
-        else:
-            recipes_limit = int(recipes_limit)
-
-        results = []
-        for author in authors:
-            recipes = Recipe.objects.filter(author=author)
-            recipes = recipes[:recipes_limit]
-            recipes_count = recipes.count()
-            recipes_data = RecipeMinifiedSerializer(
-                recipes,
-                many=True,
-                context={'request': request}
-            ).data
-
-            # Используем проверку на существование файла аватара
-            results.append({
-                'id': author.id,
-                'username': author.username,
-                'first_name': author.first_name,
-                'last_name': author.last_name,
-                'email': author.email,
-                'avatar': author.avatar.url if author.avatar else None,
-                'is_subscribed': Follow.objects.filter(
-                    user=request.user, author=author
-                ).exists(),
-                'recipes': recipes_data,
-                'recipes_count': recipes_count,
-            })
-
-        return paginator.get_paginated_response(results)
+        return self.get_paginated_response(serializer.data)
 
     @action(
         detail=True,
@@ -130,49 +103,39 @@ class UserViewSet(DjoserUserViewSet):
     def subscribe(self, request, id=None):
         author = get_object_or_404(User, pk=id)
 
-        if author == request.user:
-            return Response(
-                {'detail': 'Нельзя подписаться на себя.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         if request.method == 'POST':
-            follow, created = Follow.objects.get_or_create(
-                user=request.user,
-                author=author
-            )
-            if created:
-                recipes_limit = request.query_params.get('recipes_limit', None)
-                recipes = Recipe.objects.filter(author=author)
-
-                if recipes_limit is None:
-                    recipes_limit = 10
-
-                try:
-                    recipes = recipes[:int(recipes_limit)]
-                except (ValueError, TypeError):
-                    recipes = recipes[:10]
-
-                recipes_count = recipes.count()
-                response_data = {
-                    'id': author.id,
-                    'username': author.username,
-                    'first_name': author.first_name,
-                    'last_name': author.last_name,
-                    'email': author.email,
-                    'avatar': author.avatar.url if author.avatar else None,
-                    'is_subscribed': True,
-                    'recipes_count': recipes_count,
-                    'recipes': RecipeMinifiedSerializer(
-                        recipes, many=True
-                    ).data,
+            serializer = FollowSerializer(
+                data={
+                    'author': author.id,
+                    'user': request.user.id
+                },
+                context={
+                    'request': request
                 }
-                return Response(response_data, status=status.HTTP_201_CREATED)
-
-            return Response(
-                {'detail': 'Уже подписаны на этого пользователя.'},
-                status=status.HTTP_400_BAD_REQUEST
             )
+
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            user_serializer = UserWithRecipesSerializer(
+                author,
+                context={'request': request}
+            )
+
+            # Получаем рецепты и добавляем их в user_data
+            user_data = user_serializer.data
+            user_data['recipes'] = user_serializer.get_recipes(author)
+
+            return Response(user_data, status=status.HTTP_201_CREATED)
+
+        elif request.method == 'DELETE':
+            follows = Follow.objects.filter(author=author, user=request.user)
+
+            if follows.exists():
+                follows.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 class TagViewSet(viewsets.ModelViewSet):

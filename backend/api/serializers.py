@@ -55,7 +55,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
+        if request is not None and request.user.is_authenticated:
             return Follow.objects.filter(
                 user=request.user, author=obj
             ).exists()
@@ -69,6 +69,12 @@ class FollowSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follow
         fields = ('user', 'author')
+
+    def to_representation(self, instance):
+        return UserWithRecipesSerializer(
+            instance.author,
+            context=self.context
+        ).data
 
 
 class IngredientInRecipeSerializer(serializers.ModelSerializer):
@@ -274,20 +280,33 @@ class UserWithRecipesSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        if request.user.is_authenticated:
+        if request is not None and request.user.is_authenticated:
             return Follow.objects.filter(
                 user=request.user, author=obj
             ).exists()
         return False
 
-    def get_recipes_count(self, data):
-        return Recipe.objects.filter(author=data).count()
+    def get_recipes(self, user):
+        recipes = user.recipes.all()
+        recipes_limit = self.context.get(
+            'request'
+        ).GET.get('recipes_limit', None)
 
-    def get_recipes(self, data):
-        recipes_limit = self.context.get('request').GET.get('recipes_limit')
-        recipes = (
-            data.recipes.all()[:int(recipes_limit)]
-            if recipes_limit else data.recipes
-        )
-        serializer = serializers.ListSerializer(child=RecipeSerializer())
-        return serializer.to_representation(recipes)
+        if recipes_limit is not None:
+            try:
+                recipes_limit = int(recipes_limit)
+                if recipes_limit < 0:
+                    recipes_limit = 0
+            except ValueError:
+                recipes_limit = recipes.count()
+        else:
+            recipes_limit = recipes.count()
+
+        recipes = recipes[:recipes_limit]
+        serializer = RecipeMinifiedSerializer(recipes, many=True)
+        return serializer.data
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['recipes_count'] = instance.recipes.count()
+        return representation
