@@ -9,8 +9,8 @@ class LimitPagination(PageNumberPagination):
 
 
 class CustomLimitOffsetPagination(LimitOffsetPagination):
-    default_limit = 25  # Значение по умолчанию для limit
-    max_limit = 50      # Максимально допустимое значение для limit
+    default_limit = 25
+    max_limit = 50
 
     def get_limit(self, request):
         """
