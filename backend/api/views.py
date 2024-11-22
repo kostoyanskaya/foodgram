@@ -1,14 +1,13 @@
 from collections import defaultdict
 import io
 
-from rest_framework import filters
 from django.contrib.auth import get_user_model
 from django.db.models import F
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
-from rest_framework import status, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -104,6 +103,16 @@ class UserViewSet(DjoserUserViewSet):
         author = get_object_or_404(User, pk=id)
 
         if request.method == 'POST':
+            if request.user.id == author.id:
+                return Response({'Вы не можете подписаться на самого себя.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            if Follow.objects.filter(
+                author=author, user=request.user
+            ).exists():
+                return Response({'Вы уже подписаны на этого пользователя.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
             serializer = FollowSerializer(
                 data={
                     'author': author.id,
@@ -122,7 +131,6 @@ class UserViewSet(DjoserUserViewSet):
                 context={'request': request}
             )
 
-            # Получаем рецепты и добавляем их в user_data
             user_data = user_serializer.data
             user_data['recipes'] = user_serializer.get_recipes(author)
 
@@ -135,7 +143,7 @@ class UserViewSet(DjoserUserViewSet):
                 follows.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             else:
-                return Response(status=status.HTTP_404_NOT_FOUND)
+                return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class TagViewSet(viewsets.ModelViewSet):
