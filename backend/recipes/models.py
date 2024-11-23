@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from users.models import User
+from api.validators import validate_ingredients
 
 
 class Tag(models.Model):
@@ -32,6 +33,9 @@ class Ingredient(models.Model):
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
 
+    def __str__(self):
+        return self.name
+
 
 class Recipe(models.Model):
     author = models.ForeignKey(
@@ -41,7 +45,8 @@ class Recipe(models.Model):
     ingredients = models.ManyToManyField(
         Ingredient,
         verbose_name='Ингредиенты',
-        related_name='recipes'
+        related_name='recipes',
+        validators=(validate_ingredients,)
     )
     name = models.CharField(max_length=256, verbose_name='Название рецепта')
     text = models.TextField(verbose_name='Описание рецепта')
@@ -109,7 +114,12 @@ class IngredientInRecipe(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Ингредиент'
     )
-    amount = models.PositiveSmallIntegerField(verbose_name='Количество')
+    amount = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1, "Количество должно быть больше 1")
+        ],
+        verbose_name='Количество'
+    )
 
     class Meta:
         default_related_name = 'ingredient_recipe'

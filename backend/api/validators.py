@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 
 def validate_tags(value):
@@ -11,11 +12,11 @@ def validate_tags(value):
 
 def validate_ingredients(value):
     if not value:
-        raise serializers.ValidationError("Добавьте хотя бы один ингредиент.")
+        raise ValidationError("Добавьте хотя бы один ингредиент.")
     ingredient_ids = []
     for ingredient in value:
         if ingredient['amount'] < 1:
-            raise serializers.ValidationError(
+            raise ValidationError(
                 "Количество ингредиента должно быть больше 0"
             )
         ingredient_ids.append(ingredient['ingredient']['id'])

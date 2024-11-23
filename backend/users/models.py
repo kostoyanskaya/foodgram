@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.core.exceptions import ValidationError
 
 from .validators import validate_username
 
@@ -58,6 +59,11 @@ class Follow(models.Model):
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
+        unique_together = [['user', 'author']]
+
+    def clean(self):
+        if self.user == self.author:
+            raise ValidationError('Вы не можете подписаться на самого себя.')
 
     def __str__(self):
         return f'{self.user} подписался на {self.author}'

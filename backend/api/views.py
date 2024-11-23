@@ -7,7 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
-from rest_framework import filters, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -35,9 +35,6 @@ class UserViewSet(DjoserUserViewSet):
     serializer_class = UserDetailSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
     pagination_class = CustomLimitOffsetPagination
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
-    filterset_fields = ('username', 'email')
-    ordering_fields = ('username', 'email')
 
     @action(
         detail=False,
@@ -83,7 +80,7 @@ class UserViewSet(DjoserUserViewSet):
     def subscriptions(self, request):
         queryset = User.objects.filter(
             following__user=request.user
-        ).prefetch_related('recipes').order_by('pk')
+        ).prefetch_related('recipes')
         page = self.paginate_queryset(queryset)
 
         serializer = UserWithRecipesSerializer(
