@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag, IngredientInRecipe
+from recipes.models import (
+    Favorite, Ingredient, Recipe,
+    ShoppingCart, Tag, IngredientInRecipe
+)
 from .models import User, Follow
 
 
@@ -20,6 +23,7 @@ class IngredientInRecipeInline(admin.TabularInline):
     model = IngredientInRecipe
     min_num = 1
     extra = 1
+
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
@@ -41,6 +45,7 @@ class RecipeAdmin(admin.ModelAdmin):
         return ', '.join([tag.name for tag in obj.tags.all()])
 
     tags_list.short_description = 'Теги'
+
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
