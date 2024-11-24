@@ -1,9 +1,11 @@
+import random
+import string
+
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from users.models import User
 from api.validators import validate_ingredients
-from api.views import generate_short_code
 
 
 class Tag(models.Model):
@@ -61,13 +63,20 @@ class Recipe(models.Model):
         verbose_name='Дата публикации',
         auto_now_add=True
     )
+    short_code = models.CharField(max_length=10, unique=True, blank=True)
 
     def __str__(self):
         return self.name
 
+    def generate_short_code(self, length=6):
+        """Генерирует уникальный короткий код."""
+        letters = string.ascii_letters + string.digits
+        short_code = ''.join(random.choice(letters) for _ in range(length))
+        return short_code
+
     def save(self, *args, **kwargs):
         if not self.short_code:
-            self.short_code = generate_short_code()
+            self.short_code = self.generate_short_code()
         super().save(*args, **kwargs)
 
     class Meta:

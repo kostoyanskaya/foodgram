@@ -1,7 +1,5 @@
 from collections import defaultdict
 import io
-import random
-import string
 
 from django.contrib.auth import get_user_model
 from django.db.models import F
@@ -229,6 +227,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 {'Рецепт не найден'}, status=status.HTTP_400_BAD_REQUEST
             )
 
+    @action(detail=True, methods=['GET'], url_path='get-link')
     def get_link(self, request, pk):
         """Получаем короткую ссылку."""
         recipe = get_object_or_404(Recipe, id=pk)
@@ -317,13 +316,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'attachment; filename="shopping_cart.txt"'
         )
         return response
-
-
-def generate_short_code(length=6):
-    """Генерирует уникальный короткий код."""
-    letters = string.ascii_letters + string.digits
-    short_code = ''.join(random.choice(letters) for _ in range(length))
-    return short_code
 
 
 class LinkViewSet(viewsets.ViewSet):
