@@ -210,7 +210,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         if isinstance(user, AnonymousUser):
             raise serializers.ValidationError(
-                "Вы должны войти в систему, чтобы создать рецепт."
+                "Вы должны войти в систему, чтобы создать рецепт"
             )
 
         recipe = Recipe.objects.create(author=user, **validated_data)
