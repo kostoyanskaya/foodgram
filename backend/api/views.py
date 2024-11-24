@@ -107,7 +107,7 @@ class UserViewSet(DjoserUserViewSet):
             if Follow.objects.filter(
                 author=author, user=request.user
             ).exists():
-                return Response({'Вы уже подписаны на этого пользователя'},
+                return Response({'Вы уже подписаны на этого пользователя.'},
                                 status=status.HTTP_400_BAD_REQUEST)
 
             serializer = FollowSerializer(

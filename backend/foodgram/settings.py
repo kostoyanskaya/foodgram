@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'my_key')
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['51.250.105.199', 'localhost', '127.0.0.1', 'foodgramdelicious.ddnsking.com']
 
@@ -69,6 +69,7 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', 5432)
     }
 }
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
