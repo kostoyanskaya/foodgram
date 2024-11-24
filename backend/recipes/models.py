@@ -63,7 +63,9 @@ class Recipe(models.Model):
         verbose_name='Дата публикации',
         auto_now_add=True
     )
-    short_code = models.CharField(max_length=10, unique=True, blank=True)
+    short_code = models.CharField(
+        max_length=10, editable=False, unique=True, blank=True
+    )
 
     def __str__(self):
         return self.name

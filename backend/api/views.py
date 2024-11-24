@@ -167,7 +167,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_object(self):
-        """Получаем тег по ID из параметров URL."""
+        """Получаем тег по ID из параметров URL"""
         return get_object_or_404(Ingredient, id=self.kwargs['pk'])
 
 
