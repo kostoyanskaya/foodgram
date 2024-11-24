@@ -172,7 +172,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    """ViewSet для работы с объектами модели Recipe."""
+    """ViewSet для работы с объектами модели Recipe"""
     serializer_class = RecipeSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
     http_method_names = ['get', 'post', 'patch', 'delete']
