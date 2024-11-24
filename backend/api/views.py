@@ -1,10 +1,12 @@
 from collections import defaultdict
 import io
+import random
+import string
 
 from django.contrib.auth import get_user_model
 from django.db.models import F
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status, viewsets
@@ -227,12 +229,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 {'Рецепт не найден'}, status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(detail=True, methods=['GET'], url_path='get-link')
     def get_link(self, request, pk):
         """Получаем короткую ссылку."""
-        get_object_or_404(Recipe, id=pk)
+        recipe = get_object_or_404(Recipe, id=pk)
         return Response(
-            {'short-link': f'{SITE_URL}/recipes/{pk}'},
+            {'short-link': f'{SITE_URL}/s/{recipe.short_code}/'},
             status=status.HTTP_200_OK
         )
 
@@ -316,3 +317,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'attachment; filename="shopping_cart.txt"'
         )
         return response
+
+
+def generate_short_code(length=6):
+    """Генерирует уникальный короткий код."""
+    letters = string.ascii_letters + string.digits
+    short_code = ''.join(random.choice(letters) for _ in range(length))
+    return short_code
+
+
+class LinkViewSet(viewsets.ViewSet):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+
+    def redirect_short_link(self, request, short_code=None):
+        """Получаем рецепт по короткому коду."""
+        recipe = get_object_or_404(Recipe, short_code=short_code)
+
+        return HttpResponseRedirect(
+            request.build_absolute_uri(f'/recipes/{recipe.id}')
+        )

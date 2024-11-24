@@ -3,6 +3,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 
 from users.models import User
 from api.validators import validate_ingredients
+from api.views import generate_short_code
 
 
 class Tag(models.Model):
@@ -63,6 +64,11 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.short_code:
+            self.short_code = generate_short_code()
+        super().save(*args, **kwargs)
 
     class Meta:
         ordering = ('-pub_date',)
