@@ -157,7 +157,7 @@ class TagViewSet(viewsets.ModelViewSet):
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
-    """ViewSet для работы с объектами модели Ingredient."""
+    """ViewSet для работы с объектами модели Ingredient"""
     serializer_class = IngredientSerializer
     permission_classes = [AllowAny]
     http_method_names = ['get']
