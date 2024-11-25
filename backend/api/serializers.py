@@ -94,6 +94,13 @@ class IngredientInRecipeSerializer(serializers.ModelSerializer):
         model = IngredientInRecipe
         fields = ('id', 'amount', 'name', 'measurement_unit')
 
+    def validate(self, attrs):
+        if attrs['amount'] < 1:
+            raise serializers.ValidationError(
+                "Количество ингредиента должно быть больше 0"
+            )
+        return attrs
+
 
 class RecipeMinifiedSerializer(serializers.ModelSerializer):
     """Уменьшенная версия сериализатора для модели Recipe."""
