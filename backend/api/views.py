@@ -79,7 +79,7 @@ class UserViewSet(DjoserUserViewSet):
     )
     def subscriptions(self, request):
         queryset = User.objects.filter(
-            follower__user=request.user
+            following__user=request.user
         ).prefetch_related('recipes')
 
         page = self.paginate_queryset(queryset)
