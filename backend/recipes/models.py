@@ -5,7 +5,7 @@ from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from users.models import User
-from api.validators import validate_ingredients
+from django.core.exceptions import ValidationError
 
 
 class Tag(models.Model):
@@ -49,7 +49,6 @@ class Recipe(models.Model):
         Ingredient,
         verbose_name='Ингредиенты',
         related_name='recipes',
-        validators=(validate_ingredients,)
     )
     name = models.CharField(max_length=256, verbose_name='Название рецепта')
     text = models.TextField(verbose_name='Описание рецепта')
@@ -76,9 +75,17 @@ class Recipe(models.Model):
         short_code = ''.join(random.choice(letters) for _ in range(length))
         return short_code
 
+    def clean(self):
+        super().clean()
+        if not hasattr(self, 'pk') and not self.ingredients.exists():
+            raise ValidationError(
+                {'ingredients': ['Нужно добавить хотя бы один ингредиент']}
+            )
+
     def save(self, *args, **kwargs):
         if not self.short_code:
             self.short_code = self.generate_short_code()
+        self.full_clean()
         super().save(*args, **kwargs)
 
     class Meta:

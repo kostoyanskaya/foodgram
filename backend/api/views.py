@@ -79,8 +79,9 @@ class UserViewSet(DjoserUserViewSet):
     )
     def subscriptions(self, request):
         queryset = User.objects.filter(
-            following__user=request.user
+            follower__user=request.user
         ).prefetch_related('recipes')
+
         page = self.paginate_queryset(queryset)
 
         serializer = UserWithRecipesSerializer(
@@ -89,7 +90,32 @@ class UserViewSet(DjoserUserViewSet):
             context={'request': request}
         )
 
-        return self.get_paginated_response(serializer.data)
+        user_data = serializer.data
+
+        for user in user_data:
+            user_id = user['id']
+            user_instance = User.objects.get(pk=user_id)
+            user['recipes'] = self.get_recipes(user_instance, request)
+
+        return self.get_paginated_response(user_data)
+
+    def get_recipes(self, user, request):
+        recipes = user.recipes.all()
+        recipes_limit = request.GET.get('recipes_limit', None)
+
+        if recipes_limit is not None:
+            try:
+                recipes_limit = int(recipes_limit)
+                if recipes_limit < 0:
+                    recipes_limit = 0
+            except ValueError:
+                recipes_limit = recipes.count()
+        else:
+            recipes_limit = recipes.count()
+
+        recipes = recipes[:recipes_limit]
+        serializer = RecipeMinifiedSerializer(recipes, many=True)
+        return serializer.data
 
     @action(
         detail=True,
@@ -157,7 +183,7 @@ class TagViewSet(viewsets.ModelViewSet):
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
-    """ViewSet для работы с объектами модели Ingredient"""
+    """ViewSet для работы с объектами модели Ingredient."""
     serializer_class = IngredientSerializer
     permission_classes = [AllowAny]
     http_method_names = ['get']
