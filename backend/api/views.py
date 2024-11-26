@@ -15,11 +15,11 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 
 from .filters import IngredientFilter, RecipeFilter
-from .paginations import LimitPagination, CustomLimitOffsetPagination
+from .paginations import LimitPagination
 from .serializers import (
     AvatarSerializer, IngredientSerializer, RecipeMinifiedSerializer,
     RecipeSerializer, TagSerializer, UserDetailSerializer,
-    UserWithRecipesSerializer, FollowSerializer
+    UserWithRecipesSerializer
 )
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Follow
@@ -34,7 +34,7 @@ class UserViewSet(DjoserUserViewSet):
     queryset = User.objects.all()
     serializer_class = UserDetailSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
-    pagination_class = CustomLimitOffsetPagination
+    pagination_class = LimitPagination
 
     @action(
         detail=False,
@@ -135,19 +135,10 @@ class UserViewSet(DjoserUserViewSet):
             ).exists():
                 return Response({'Вы уже подписаны на этого пользователя.'},
                                 status=status.HTTP_400_BAD_REQUEST)
-
-            serializer = FollowSerializer(
-                data={
-                    'author': author.id,
-                    'user': request.user.id
-                },
-                context={
-                    'request': request
-                }
+            Follow.objects.create(
+                author=author,
+                user=request.user
             )
-
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
 
             user_serializer = UserWithRecipesSerializer(
                 author,

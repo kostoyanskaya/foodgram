@@ -1,22 +1,21 @@
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 
-def validate_tags(value):
-    if not value:
+def validate_tags(tags):
+    if not tags:
         raise serializers.ValidationError("Поле tags не должно быть пустым.")
-    if len(value) != len(set(value)):
+    if len(tags) != len(set(tags)):
         raise serializers.ValidationError("Теги не должны повторяться.")
-    return value
+    return tags
 
 
-def validate_ingredients(value):
-    if not value:
-        raise ValidationError("Добавьте хотя бы один ингредиент.")
+def validate_ingredients(ingredients):
+    if not ingredients:
+        raise serializers.ValidationError("Добавьте хотя бы один ингредиент.")
     ingredient_ids = []
-    for ingredient in value:
+    for ingredient in ingredients:
         if ingredient['amount'] < 1:
-            raise ValidationError(
+            raise serializers.ValidationError(
                 "Количество ингредиента должно быть больше 0"
             )
         ingredient_ids.append(ingredient['ingredient']['id'])
@@ -24,4 +23,4 @@ def validate_ingredients(value):
     if len(ingredient_ids) != len(set(ingredient_ids)):
         raise serializers.ValidationError("Ингредиенты не должны повторяться.")
 
-    return value
+    return ingredients
