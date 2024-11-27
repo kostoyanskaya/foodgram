@@ -258,6 +258,10 @@ class UserWithRecipesSerializer(BaseUserSerializer):
         else:
             recipes_limit = recipes.count()
 
+        recipes = recipes[:recipes_limit]
+        serializer = RecipeMinifiedSerializer(recipes, many=True)
+        return serializer.data
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['recipes_count'] = instance.recipes.count()
