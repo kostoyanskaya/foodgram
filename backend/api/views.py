@@ -116,7 +116,7 @@ class UserViewSet(DjoserUserViewSet):
                 author=author, user=request.user
             ).exists():
                 raise ValidationError(
-                    {'Вы уже подписаны на этого пользователя.'}
+                    {'Вы уже подписаны на этого пользователя'}
                 )
             Follow.objects.create(
                 author=author,
