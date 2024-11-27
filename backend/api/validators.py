@@ -12,13 +12,9 @@ def validate_tags(tags):
 def validate_ingredients(ingredients):
     if not ingredients:
         raise serializers.ValidationError("Добавьте хотя бы один ингредиент.")
-    ingredient_ids = []
-    for ingredient in ingredients:
-        if ingredient['amount'] < 1:
-            raise serializers.ValidationError(
-                "Количество ингредиента должно быть больше 0"
-            )
-        ingredient_ids.append(ingredient['ingredient']['id'])
+    ingredient_ids = [
+        ingredient['ingredient']['id'] for ingredient in ingredients
+    ]
 
     if len(ingredient_ids) != len(set(ingredient_ids)):
         raise serializers.ValidationError("Ингредиенты не должны повторяться.")

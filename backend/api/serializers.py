@@ -244,9 +244,9 @@ class UserWithRecipesSerializer(BaseUserSerializer):
 
     def get_recipes(self, user):
         recipes = user.recipes.all()
-        recipes_limit = self.context.get(
-            'request'
-        ).GET.get('recipes_limit', None)
+        recipes_limit = self.context.get('request').GET.get(
+            'recipes_limit', None
+        )
 
         if recipes_limit is not None:
             try:
@@ -257,10 +257,6 @@ class UserWithRecipesSerializer(BaseUserSerializer):
                 recipes_limit = recipes.count()
         else:
             recipes_limit = recipes.count()
-
-        recipes = recipes[:recipes_limit]
-        serializer = RecipeMinifiedSerializer(recipes, many=True)
-        return serializer.data
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)

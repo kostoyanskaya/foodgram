@@ -1,8 +1,10 @@
 from collections import defaultdict
 import io
+import os
 
 from django.contrib.auth import get_user_model
 from django.db.models import F
+from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
@@ -54,13 +56,13 @@ class UserViewSet(DjoserUserViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-
-        elif request.method == 'DELETE':
-            user.avatar = None
-            user.save()
-            return Response(
-                {'Аватар удален.'}, status=status.HTTP_204_NO_CONTENT
-            )
+        if user.avatar:
+            avatar_file_path = user.avatar.path
+            if os.path.exists(avatar_file_path):
+                os.remove(avatar_file_path)
+        user.avatar = None
+        user.save()
+        return Response({'Аватар удален.'}, status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False,
@@ -84,38 +86,17 @@ class UserViewSet(DjoserUserViewSet):
 
         page = self.paginate_queryset(queryset)
 
-        serializer = UserWithRecipesSerializer(
-            page,
-            many=True,
-            context={'request': request}
-        )
-
-        user_data = serializer.data
-
-        for user in user_data:
-            user_id = user['id']
-            user_instance = User.objects.get(pk=user_id)
-            user['recipes'] = self.get_recipes(user_instance, request)
+        user_data = []
+        for user in page:
+            serializer = UserWithRecipesSerializer(
+                user,
+                context={'request': request}
+            )
+            user_representation = serializer.data
+            user_representation['recipes'] = serializer.get_recipes(user)
+            user_data.append(user_representation)
 
         return self.get_paginated_response(user_data)
-
-    def get_recipes(self, user, request):
-        recipes = user.recipes.all()
-        recipes_limit = request.GET.get('recipes_limit', None)
-
-        if recipes_limit is not None:
-            try:
-                recipes_limit = int(recipes_limit)
-                if recipes_limit < 0:
-                    recipes_limit = 0
-            except ValueError:
-                recipes_limit = recipes.count()
-        else:
-            recipes_limit = recipes.count()
-
-        recipes = recipes[:recipes_limit]
-        serializer = RecipeMinifiedSerializer(recipes, many=True)
-        return serializer.data
 
     @action(
         detail=True,
@@ -127,14 +108,16 @@ class UserViewSet(DjoserUserViewSet):
 
         if request.method == 'POST':
             if request.user.id == author.id:
-                return Response({'Вы не можете подписаться на самого себя.'},
-                                status=status.HTTP_400_BAD_REQUEST)
+                raise ValidationError(
+                    {'Вы не можете подписаться на самого себя.'}
+                )
 
             if Follow.objects.filter(
                 author=author, user=request.user
             ).exists():
-                return Response({'Вы уже подписаны на этого пользователя.'},
-                                status=status.HTTP_400_BAD_REQUEST)
+                raise ValidationError(
+                    {'Вы уже подписаны на этого пользователя.'}
+                )
             Follow.objects.create(
                 author=author,
                 user=request.user
@@ -149,15 +132,12 @@ class UserViewSet(DjoserUserViewSet):
             user_data['recipes'] = user_serializer.get_recipes(author)
 
             return Response(user_data, status=status.HTTP_201_CREATED)
-
-        elif request.method == 'DELETE':
-            follows = Follow.objects.filter(author=author, user=request.user)
-
-            if follows.exists():
-                follows.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            else:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+        try:
+            follow = Follow.objects.get(author=author, user=request.user)
+            follow.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Follow.DoesNotExist:
+            raise ValidationError({'Подписка не найдена.'})
 
 
 class TagViewSet(viewsets.ModelViewSet):
