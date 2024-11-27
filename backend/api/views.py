@@ -112,7 +112,7 @@ class UserViewSet(DjoserUserViewSet):
         if request.method == 'POST':
             if request.user.id == author.id:
                 raise ValidationError(
-                    {'Вы не можете подписаться на самого себя.'}
+                    {'Вы не можете подписаться на самого себя'}
                 )
 
             if Follow.objects.filter(
