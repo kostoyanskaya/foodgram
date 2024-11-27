@@ -86,16 +86,19 @@ class UserViewSet(DjoserUserViewSet):
 
         page = self.paginate_queryset(queryset)
 
-        user_data = []
-        for user in page:
-            serializer = UserWithRecipesSerializer(
-                user,
-                context={'request': request}
-            )
-            user_representation = serializer.data
-            user_representation['recipes'] = serializer.get_recipes(user)
-            user_data.append(user_representation)
+        serializer = UserWithRecipesSerializer(
+            page,
+            many=True,
+            context={'request': request}
+        )
 
+        user_data = serializer.data
+
+        for index, user in enumerate(user_data):
+            user_instance = User.objects.get(pk=user['id'])
+            user_data[index]['recipes'] = serializer.child.get_recipes(
+                user_instance
+            )
         return self.get_paginated_response(user_data)
 
     @action(
@@ -140,32 +143,20 @@ class UserViewSet(DjoserUserViewSet):
             raise ValidationError({'Подписка не найдена.'})
 
 
-class TagViewSet(viewsets.ModelViewSet):
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet для работы с объектами модели Tag."""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [AllowAny]
-    pagination_class = None
-    http_method_names = ['get']
-
-    def get_object(self):
-        """Получаем тег по ID из параметров URL."""
-        return get_object_or_404(Tag, id=self.kwargs['pk'])
 
 
-class IngredientViewSet(viewsets.ModelViewSet):
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet для работы с объектами модели Ingredient."""
     serializer_class = IngredientSerializer
     permission_classes = [AllowAny]
-    http_method_names = ['get']
     queryset = Ingredient.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
-    pagination_class = None
-
-    def get_object(self):
-        """Получаем тег по ID из параметров URL"""
-        return get_object_or_404(Ingredient, id=self.kwargs['pk'])
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
