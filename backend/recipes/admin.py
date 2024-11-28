@@ -37,7 +37,7 @@ class RecipeAdmin(admin.ModelAdmin):
     show_image.short_description = 'Изображение'
 
     def favorites_count(self, recipe):
-        return recipe.favorited_by.count()
+        return recipe.favorite_list.count()
     favorites_count.short_description = 'Количество в избранном'
 
     @mark_safe
@@ -49,7 +49,7 @@ class RecipeAdmin(admin.ModelAdmin):
     def product_list(self, recipe):
         return ', '.join(
             f'{ingredient.ingredient.name} ({ingredient.amount})'
-            for ingredient in recipe.ingredient_recipe.all()
+            for ingredient in recipe.ingredients_in_recipes.all()
         )
     product_list.short_description = 'Продукты'
 

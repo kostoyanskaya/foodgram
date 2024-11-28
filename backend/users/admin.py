@@ -42,13 +42,13 @@ class UserAdmin(BaseUserAdmin):
 
     def get_subscriptions_count(self, obj):
         """Возвращает количество подписок."""
-        return obj.following.count()
+        return obj.followings.count()
 
     get_subscriptions_count.short_description = 'Количество подписок'
 
     def get_followers_count(self, obj):
         """Возвращает количество подписчиков."""
-        return obj.follower.count()
+        return obj.followers.count()
 
     get_followers_count.short_description = 'Количество подписчиков'
 

@@ -125,7 +125,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
     ingredients = IngredientInRecipeSerializer(
-        many=True, source='ingredient_recipe'
+        many=True, source='ingredients_in_recipes'
     )
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True
@@ -174,7 +174,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         return representation
 
     def create(self, validated_data):
-        ingredients_data = validated_data.pop('ingredient_recipe')
+        ingredients_data = validated_data.pop('ingredients_in_recipes')
         self.validate_ingredients(ingredients_data)
 
         tags_data = validated_data.pop('tags')
@@ -196,7 +196,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         if instance.author != self.context.get('request').user:
             raise PermissionDenied("Только автор рецепта может его обновить.")
-        ingredients_data = validated_data.pop('ingredient_recipe', [])
+        ingredients_data = validated_data.pop('ingredients_in_recipes', [])
         tags_data = validated_data.pop('tags', [])
 
         self.validate_ingredients(ingredients_data)

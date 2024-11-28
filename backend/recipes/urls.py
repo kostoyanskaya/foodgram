@@ -3,7 +3,7 @@ from .views import redirect_short_link
 
 urlpatterns = [
     path(
-        's/<str:short_code>/',
+        's/<int:pk>/',
         redirect_short_link,
         name='redirect_short_link'
     ),

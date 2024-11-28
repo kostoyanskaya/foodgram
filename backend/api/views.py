@@ -26,7 +26,6 @@ from .serializers import (
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Follow
 
-SITE_URL = 'foodgramdelicious.ddnsking.com'
 
 User = get_user_model()
 
@@ -81,7 +80,7 @@ class UserViewSet(DjoserUserViewSet):
     )
     def subscriptions(self, request):
         queryset = User.objects.filter(
-            following__user=request.user
+            followings__user=request.user
         ).prefetch_related('recipes')
 
         page = self.paginate_queryset(queryset)
@@ -216,7 +215,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request, pk):
         """Получаем короткую ссылку."""
         recipe = get_object_or_404(Recipe, id=pk)
-        short_link = request.build_absolute_uri(f'/s/{recipe.short_code}/')
+        short_link = request.build_absolute_uri(f'/s/{recipe.id}/')
         return Response(
             {'short-link': short_link},
             status=status.HTTP_200_OK
@@ -230,13 +229,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def download_shopping_cart(self, request):
         cart = ShoppingCart.objects.filter(user=request.user).prefetch_related(
-            'recipe__ingredient_recipe'
+            'recipe__ingredients_in_recipes'
         ).annotate(
-            ingredient_name=F('recipe__ingredient_recipe__ingredient__name'),
-            ingredient_unit=F(
-                'recipe__ingredient_recipe__ingredient__measurement_unit'
+            ingredient_name=F(
+                'recipe__ingredients_in_recipes__ingredient__name'
             ),
-            amount=F('recipe__ingredient_recipe__amount'),
+            ingredient_unit=F(
+                'recipe__ingredients_in_recipes__ingredient__measurement_unit'
+            ),
+            amount=F('recipe__ingredients_in_recipes__amount'),
         ).values(
             'ingredient_name',
             'ingredient_unit',

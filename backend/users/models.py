@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.db.models import UniqueConstraint
 
 
 class User(AbstractUser):
@@ -11,24 +12,21 @@ class User(AbstractUser):
     username = models.CharField(
         verbose_name='Логин',
         unique=True,
-        blank=False,
         max_length=150,
         validators=[username_validator]
     )
     email = models.EmailField(
         verbose_name='Электронная почта',
         unique=True,
-        blank=False,
+        max_length=254
     )
     first_name = models.CharField(
         verbose_name='Имя',
-        max_length=150,
-        blank=False
+        max_length=150
     )
     last_name = models.CharField(
         verbose_name='Фамилия',
         max_length=150,
-        blank=False
     )
     avatar = models.ImageField(
         upload_to='users/',
@@ -40,6 +38,7 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
     class Meta:
+        ordering = ('username',)
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
@@ -49,19 +48,23 @@ class Follow(models.Model):
         User,
         verbose_name='Кто подписан',
         on_delete=models.CASCADE,
-        related_name='follower'
+        related_name='followers'
     )
     author = models.ForeignKey(
         User,
         verbose_name='На кого подписан',
         on_delete=models.CASCADE,
-        related_name='following'
+        related_name='followings'
     )
 
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
-        unique_together = [['user', 'author']]
+        constraints = [
+            UniqueConstraint(
+                fields=['user', 'author'], name='unique_user_author'
+            )
+        ]
 
     def clean(self):
         if self.user == self.author:
