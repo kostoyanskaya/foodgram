@@ -1,1 +1,2 @@
 MIN_AMOUNT = 1
+PAGE_SIZE = 6

@@ -9,9 +9,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'my_key')
 
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['51.250.105.199', 'localhost', '127.0.0.1', 'foodgramdelicious.ddnsking.com']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -61,8 +61,12 @@ WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'foodgram'),
+        'USER': os.getenv('POSTGRES_USER', 'foodgram'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', ''),
+        'PORT': os.getenv('DB_PORT', 5432)
     }
 }
 
@@ -110,10 +114,10 @@ REST_FRAMEWORK = {
     ),
 }
 
-DJOSER = {
-    'LOGIN_FIELD': 'email',
-    "PERMISSIONS": {
-        "user": ("rest_framework.permissions.IsAuthenticatedOrReadOnly"),
-        "user_list": ("rest_framework.permissions.AllowAny",),
+DJOSER = { 
+    'LOGIN_FIELD': 'email', 
+    'PERMISSIONS': { 
+        'user': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',), 
+        'user_list': ('rest_framework.permissions.AllowAny',), 
     },
 }

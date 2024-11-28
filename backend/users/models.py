@@ -1,17 +1,19 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.exceptions import ValidationError
-
-from .validators import validate_username
+from django.contrib.auth.validators import UnicodeUsernameValidator
 
 
 class User(AbstractUser):
+
+    username_validator = UnicodeUsernameValidator()
+
     username = models.CharField(
         verbose_name='Логин',
         unique=True,
         blank=False,
         max_length=150,
-        validators=[validate_username]
+        validators=[username_validator]
     )
     email = models.EmailField(
         verbose_name='Электронная почта',

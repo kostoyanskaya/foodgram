@@ -1,27 +1,27 @@
 import csv
 import os
 from django.core.management.base import BaseCommand
-from recipes.models import Ingredient
+from recipes.models import Tag
 
 
 class Command(BaseCommand):
-    help = 'Import ingredients from CSV file'
+    help = 'Import tags from CSV file'
 
     def handle(self, *args, **kwargs):
-        csv_file_path = os.path.join('data', 'ingredients.csv')
+        csv_file_path = os.path.join('data', 'tags.csv')
 
         with open(csv_file_path, mode='r', encoding='utf-8') as file:
             reader = csv.reader(file)
-            ingredients = (
-                Ingredient(
+            tags = (
+                Tag(
                     name=row[0].strip(),
-                    measurement_unit=row[1].strip()
+                    slug=row[1].strip()
                 )
                 for row in reader
             )
 
-            Ingredient.objects.bulk_create(ingredients)
+            Tag.objects.bulk_create(tags)
 
         self.stdout.write(self.style.SUCCESS(
-            'Ингредиенты успешно импортированы')
+            'Теги успешно импортированы')
         )

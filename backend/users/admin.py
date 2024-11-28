@@ -1,71 +1,58 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.html import mark_safe
 
-from recipes.models import (
-    Favorite, Ingredient, Recipe,
-    ShoppingCart, Tag, IngredientInRecipe
-)
 from .models import User, Follow
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ('username', 'email', 'first_name', 'last_name')
+    list_display = (
+        'id',
+        'username',
+        'full_name',
+        'email',
+        'show_avatar',
+        'get_recipes_count',
+        'get_subscriptions_count',
+        'get_followers_count',
+    )
     search_fields = ('username', 'email')
+
+    def full_name(self, obj):
+        """Возвращает ФИО пользователя."""
+        return f"{obj.first_name} {obj.last_name}"
+
+    full_name.short_description = 'ФИО'
+
+    @mark_safe
+    def show_avatar(self, obj):
+        """Возвращает HTML-разметку аватара."""
+        if obj.avatar:
+            return f'<img src="{obj.avatar.url}" width="50" height="50" />'
+        return 'Нет аватара'
+
+    show_avatar.short_description = 'Аватар'
+
+    def get_recipes_count(self, obj):
+        """Возвращает количество рецептов пользователя."""
+        return obj.recipes.count()
+
+    get_recipes_count.short_description = 'Количество рецептов'
+
+    def get_subscriptions_count(self, obj):
+        """Возвращает количество подписок."""
+        return obj.following.count()
+
+    get_subscriptions_count.short_description = 'Количество подписок'
+
+    def get_followers_count(self, obj):
+        """Возвращает количество подписчиков."""
+        return obj.follower.count()
+
+    get_followers_count.short_description = 'Количество подписчиков'
 
 
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
     list_display = ('user', 'author')
-
-
-class IngredientInRecipeInline(admin.TabularInline):
-    model = IngredientInRecipe
-    min_num = 1
-    extra = 1
-
-
-@admin.register(Recipe)
-class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'author', 'favorites_count', 'tags_list')
-    list_display_links = ('name',)
-    search_fields = ('name', 'author__username')
-    list_filter = ('tags',)
-    inlines = [IngredientInRecipeInline]
-
-    def author(self, obj):
-        return obj.author.username
-
-    def favorites_count(self, obj):
-        return obj.favorited_by.count()
-
-    favorites_count.short_description = 'Количество в избранном'
-
-    def tags_list(self, obj):
-        return ', '.join([tag.name for tag in obj.tags.all()])
-
-    tags_list.short_description = 'Теги'
-
-
-@admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug')
-    list_display_links = ('name',)
-    search_fields = ('name',)
-
-
-@admin.register(Favorite)
-class FavoriteAdmin(admin.ModelAdmin):
-    list_display = ('user', 'recipe')
-
-
-@admin.register(Ingredient)
-class IngredientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'measurement_unit')
-    list_display_links = ('name',)
-    search_fields = ('name',)
-
-
-@admin.register(ShoppingCart)
-class ShoppingListAdmin(admin.ModelAdmin):
-    list_display = ('user', 'recipe')

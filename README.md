@@ -96,6 +96,7 @@ sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/bac
 ```
 docker exec -it <имя_контейнера> bash
 python manage.py import_ingredients
+python manage.py import_tags
 ```
 
 ## Автор

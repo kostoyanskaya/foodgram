@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import F
 from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import FileResponse, HttpResponseRedirect
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status, viewsets
@@ -182,18 +182,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 return Response(
                     serializer.data, status=status.HTTP_201_CREATED
                 )
-            return Response(
-                {'Рецепт уже добавлен.'}, status=status.HTTP_400_BAD_REQUEST
-            )
+            raise ValidationError({'Рецепт уже добавлен.'})
 
         elif request.method == 'DELETE':
-            instance = model.objects.filter(
-                user=request.user, recipe=recipe
-            ).first()
-            if instance:
+            try:
+                instance = get_object_or_404(
+                    model, user=request.user, recipe=recipe
+                )
                 instance.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response({'Не найден.'}, status=status.HTTP_400_BAD_REQUEST)
+            except Http404:
+                raise ValidationError({'Рецепт не найден в корзине.'})
 
     @action(
         methods=['post', 'delete'],
@@ -272,16 +271,4 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     'attachment; filename="shopping_cart.txt"'
                 )
             }
-        )
-
-
-class LinkViewSet(viewsets.ViewSet):
-    permission_classes = (IsAuthenticatedOrReadOnly,)
-
-    def redirect_short_link(self, request, short_code=None):
-        """Получаем рецепт по короткому коду."""
-        recipe = get_object_or_404(Recipe, short_code=short_code)
-
-        return HttpResponseRedirect(
-            request.build_absolute_uri(f'/recipes/{recipe.id}')
         )
