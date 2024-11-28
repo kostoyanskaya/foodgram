@@ -1,15 +1,14 @@
-from collections import defaultdict
 import os
 
 from django.contrib.auth import get_user_model
-from django.db.models import F
-from rest_framework.exceptions import ValidationError
+from django.db.models import F, Sum
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import FileResponse, Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 )
@@ -19,11 +18,21 @@ from .filters import IngredientFilter, RecipeFilter
 from .paginations import LimitPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
-    AvatarSerializer, IngredientSerializer, RecipeMinifiedSerializer,
-    RecipeSerializer, TagSerializer, UserDetailSerializer,
+    AvatarSerializer,
+    IngredientSerializer,
+    RecipeMinifiedSerializer,
+    RecipeSerializer,
+    TagSerializer,
+    UserDetailSerializer,
     UserWithRecipesSerializer
 )
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    ShoppingCart,
+    Tag
+)
 from users.models import Follow
 
 
@@ -111,7 +120,7 @@ class UserViewSet(DjoserUserViewSet):
         if request.method == 'POST':
             if request.user.id == author.id:
                 raise ValidationError(
-                    {'Вы не можете подписаться на самого себя'}
+                    {'Вы не можете подписаться на самого себя.'}
                 )
 
             if Follow.objects.filter(
@@ -240,36 +249,40 @@ class RecipeViewSet(viewsets.ModelViewSet):
             amount=F('recipe__ingredients_in_recipes__amount'),
         ).values(
             'ingredient_name',
-            'ingredient_unit',
-            'amount'
-        )
-
-        ingredients_summary = defaultdict(int)
-        for ingredient in cart:
-            ingredients_summary[
-                (ingredient['ingredient_name'], ingredient['ingredient_unit'])
-            ] += ingredient['amount']
+            'ingredient_unit'
+        ).annotate(total_amount=Sum('amount')).order_by('ingredient_name')
 
         ingredients_info = [
-            f'{name.capitalize()} - {amount} ({unit})'
-            for (name, unit), amount in ingredients_summary.items()
+            ('{} - {} ({})'.format(
+                ingredient['ingredient_name'].capitalize(),
+                ingredient['total_amount'],
+                ingredient['ingredient_unit']
+            ))
+            for ingredient in cart
         ]
+        recipe_ids = ShoppingCart.objects.filter(
+            user=request.user
+        ).values_list('recipe_id', flat=True).distinct()
 
-        shopping_list = '\\\\n'.join([
+        recipes = set(Recipe.objects.filter(
+            id__in=recipe_ids
+        ).values_list(
+            'name', flat=True
+        ))
+
+        shopping_list = '\n'.join([
             'Список ингредиентов:',
             *ingredients_info,
-            'Перечень рецептов:',
-            *[f'Рецепт: {recipe.name}' for recipe in Recipe.objects.filter(
-                shoppingcart__user=request.user
-            )]
+            'Список рецептов:',
+            *[f'• {recipe}' for recipe in recipes]
         ])
 
-        return FileResponse(
-            shopping_list.encode('utf-8'),
-            content_type='text/plain; charset=utf-8',
-            headers={
-                'Content-Disposition': (
-                    'attachment; filename="shopping_cart.txt"'
-                )
-            }
+        response = HttpResponse(
+            shopping_list,
+            content_type='text/plain; charset=utf-8'
         )
+        response['Content-Disposition'] = (
+            'attachment; filename=\'shopping_cart.txt\''
+        )
+
+        return response

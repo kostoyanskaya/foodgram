@@ -1,9 +1,9 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 
-from users.models import User
-from django.core.exceptions import ValidationError
 from api.constants import MIN_AMOUNT, MIN_COOKING_TIME
+from users.models import User
 
 
 class Tag(models.Model):
@@ -136,7 +136,7 @@ class IngredientInRecipe(models.Model):
     amount = models.PositiveSmallIntegerField(
         validators=[
             MinValueValidator(
-                MIN_AMOUNT, message="Количество должно быть больше 1"
+                MIN_AMOUNT, message='Количество должно быть больше 1'
             )
         ],
         verbose_name='Количество'

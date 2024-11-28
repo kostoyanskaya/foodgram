@@ -8,7 +8,6 @@ from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from .constants import MIN_AMOUNT
-from .validators import validate_ingredients, validate_tags
 from recipes.models import (
     Favorite,
     Ingredient,
@@ -18,6 +17,7 @@ from recipes.models import (
     Tag,
 )
 from users.models import Follow
+from .validators import validate_ingredients, validate_tags
 
 
 User = get_user_model()
@@ -67,8 +67,8 @@ class IngredientInRecipeSerializer(serializers.ModelSerializer):
     amount = serializers.IntegerField(
         min_value=MIN_AMOUNT,
         error_messages={
-            'min_value': f"Количество ингредиента должно быть больше "
-                         f"{MIN_AMOUNT}"
+            'min_value': f'Количество ингредиента должно быть больше '
+                         f'{MIN_AMOUNT}'
         }
     )
 
@@ -99,7 +99,7 @@ class AvatarSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if 'avatar' not in attrs or attrs['avatar'] is None:
-            raise ValidationError({'avatar': 'Необходимо добавить аватар.'})
+            raise ValidationError({'Необходимо добавить аватар.'})
         return attrs
 
 
@@ -182,7 +182,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         if isinstance(user, AnonymousUser):
             raise serializers.ValidationError(
-                "Вы должны войти в систему, чтобы создать рецепт"
+                'Вы должны войти в систему, чтобы создать рецепт'
             )
         validated_data['author'] = user
 
@@ -195,14 +195,14 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         if instance.author != self.context.get('request').user:
-            raise PermissionDenied("Только автор рецепта может его обновить.")
+            raise PermissionDenied('Только автор рецепта может его обновить.')
         ingredients_data = validated_data.pop('ingredients_in_recipes', [])
         tags_data = validated_data.pop('tags', [])
 
         self.validate_ingredients(ingredients_data)
         if not tags_data:
             raise serializers.ValidationError(
-                "Поле tags не должно быть пустым."
+                'Поле tags не должно быть пустым.'
             )
         instance.tags.clear()
         instance.tags.set(tags_data)

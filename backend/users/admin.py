@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import mark_safe
 
-from .models import User, Follow
+from .models import Follow, User
 
 
 @admin.register(User)
@@ -21,7 +21,7 @@ class UserAdmin(BaseUserAdmin):
 
     def full_name(self, obj):
         """Возвращает ФИО пользователя."""
-        return f"{obj.first_name} {obj.last_name}"
+        return f'{obj.first_name} {obj.last_name}'
 
     full_name.short_description = 'ФИО'
 
@@ -29,7 +29,10 @@ class UserAdmin(BaseUserAdmin):
     def show_avatar(self, obj):
         """Возвращает HTML-разметку аватара."""
         if obj.avatar:
-            return f'<img src="{obj.avatar.url}" width="50" height="50" />'
+            return (
+                f'<img src=\'{obj.avatar.url}\' '
+                f'width=\'50\' height=\'50\' />'
+            )
         return 'Нет аватара'
 
     show_avatar.short_description = 'Аватар'
