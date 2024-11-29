@@ -29,10 +29,11 @@ class RecipeAdmin(admin.ModelAdmin):
     list_filter = ('author', 'tags')
     inlines = [IngredientInRecipeInline]
 
+    @admin.display(description='Автор')
     def author_username(self, recipe):
         return recipe.author.username
-    author_username.short_description = 'Автор'
 
+    @admin.display(description='Изображение')
     @mark_safe
     def show_image(self, recipe):
         if recipe.image:
@@ -41,31 +42,35 @@ class RecipeAdmin(admin.ModelAdmin):
                 'width=\'50\' height=\'50\' />'
             )
         return 'Нет изображения'
-    show_image.short_description = 'Изображение'
 
+    @admin.display(description='Количество в избранном')
     def favorites_count(self, recipe):
-        return recipe.favorite_recipes.count()
-    favorites_count.short_description = 'Количество в избранном'
+        return recipe.favorite.count()
 
+    @admin.display(description='Теги')
     @mark_safe
     def tags_list(self, recipe):
         return ', '.join(tag.name for tag in recipe.tags.all())
-    tags_list.short_description = 'Теги'
 
+    @admin.display(description='Продукты')
     @mark_safe
     def product_list(self, recipe):
-        return ', '.join(
-            f'{ingredient.ingredient.name} ({ingredient.amount})'
+        return '<br>'.join(
+            f'{ingredient.ingredient.name} '
+            f'({ingredient.amount} {ingredient.ingredient.measurement_unit})'
             for ingredient in recipe.ingredients_in_recipes.all()
         )
-    product_list.short_description = 'Продукты'
 
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug')
+    list_display = ('name', 'slug', 'recipe_count')
     list_display_links = ('name',)
     search_fields = ('name',)
+
+    @admin.display(description='Количество рецептов')
+    def recipe_count(self, tag):
+        return tag.recipes.count()
 
 
 @admin.register(Favorite)
@@ -78,10 +83,9 @@ class IngredientAdmin(admin.ModelAdmin):
     list_display = ('name', 'measurement_unit', 'recipes_count')
     list_filter = ('measurement_unit',)
 
+    @admin.display(description='Количество рецептов')
     def recipes_count(self, ingredient):
         return ingredient.recipes.count()
-
-    recipes_count.short_description = 'Количество рецептов'
 
 
 @admin.register(ShoppingCart)

@@ -11,7 +11,9 @@ def validate_tags(tags):
 
 def validate_ingredients(ingredients):
     if not ingredients:
-        raise serializers.ValidationError('Добавьте хотя бы один ингредиент.')
+        raise serializers.ValidationError(
+            'Необходимо указать хотя бы один ингредиент.'
+        )
     ingredient_ids = [
         ingredient['ingredient']['id'] for ingredient in ingredients
     ]

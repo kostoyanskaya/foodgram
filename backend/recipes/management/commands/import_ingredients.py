@@ -1,29 +1,14 @@
-import csv
-import os
-
-from django.core.management.base import BaseCommand
-
+from .import_base import BaseImportCommand
 from recipes.models import Ingredient
 
 
-class Command(BaseCommand):
+class Command(BaseImportCommand):
     help = 'Import ingredients from CSV file'
 
     def handle(self, *args, **kwargs):
-        csv_file_path = os.path.join('data', 'ingredients.csv')
-
-        with open(csv_file_path, mode='r', encoding='utf-8') as file:
-            reader = csv.reader(file)
-            ingredients = (
-                Ingredient(
-                    name=row[0].strip(),
-                    measurement_unit=row[1].strip()
-                )
-                for row in reader
-            )
-
-            Ingredient.objects.bulk_create(ingredients)
-
-        self.stdout.write(self.style.SUCCESS(
-            'Ингредиенты успешно импортированы')
+        created_count = self.import_data(
+            Ingredient, 'ingredients.csv', ['name', 'measurement_unit']
         )
+        self.stdout.write(self.style.SUCCESS(
+            f'Ингредиенты успешно импортированы: {created_count}'
+        ))

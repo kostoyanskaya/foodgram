@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'my_key')
 
 DEBUG = False
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -70,6 +70,7 @@ DATABASES = {
     }
 }
 
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -114,10 +115,10 @@ REST_FRAMEWORK = {
     ),
 }
 
-DJOSER = { 
-    'LOGIN_FIELD': 'email', 
-    'PERMISSIONS': { 
-        'user': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',), 
-        'user_list': ('rest_framework.permissions.AllowAny',), 
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'PERMISSIONS': {
+        'user': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
+        'user_list': ('rest_framework.permissions.AllowAny',),
     },
 }

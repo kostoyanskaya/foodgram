@@ -1,10 +1,9 @@
-import os
-
 from django.contrib.auth import get_user_model
 from django.db.models import F, Sum
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import Http404, HttpResponse
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -26,6 +25,7 @@ from .serializers import (
     UserDetailSerializer,
     UserWithRecipesSerializer
 )
+from .utils import format_shopping_list
 from recipes.models import (
     Favorite,
     Ingredient,
@@ -34,6 +34,7 @@ from recipes.models import (
     Tag
 )
 from users.models import Follow
+import tempfile
 
 
 User = get_user_model()
@@ -54,7 +55,6 @@ class UserViewSet(DjoserUserViewSet):
     )
     def manage_avatar(self, request):
         user = request.user
-
         if request.method == 'PUT':
             serializer = AvatarSerializer(
                 user,
@@ -65,9 +65,7 @@ class UserViewSet(DjoserUserViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         if user.avatar:
-            avatar_file_path = user.avatar.path
-            if os.path.exists(avatar_file_path):
-                os.remove(avatar_file_path)
+            user.avatar.delete()
         user.avatar = None
         user.save()
         return Response({'Аватар удален.'}, status=status.HTTP_204_NO_CONTENT)
@@ -89,17 +87,14 @@ class UserViewSet(DjoserUserViewSet):
     )
     def subscriptions(self, request):
         queryset = User.objects.filter(
-            followings__user=request.user
+            authors__user=request.user
         ).prefetch_related('recipes')
-
         page = self.paginate_queryset(queryset)
-
         serializer = UserWithRecipesSerializer(
             page,
             many=True,
             context={'request': request}
         )
-
         user_data = serializer.data
 
         for index, user in enumerate(user_data):
@@ -116,39 +111,29 @@ class UserViewSet(DjoserUserViewSet):
     )
     def subscribe(self, request, id=None):
         author = get_object_or_404(User, pk=id)
-
         if request.method == 'POST':
-            if request.user.id == author.id:
+            if request.user == author:
                 raise ValidationError(
-                    {'Вы не можете подписаться на самого себя.'}
+                    'Вы не можете подписаться на самого себя.'
                 )
-
-            if Follow.objects.filter(
+            follow, created = Follow.objects.get_or_create(
                 author=author, user=request.user
-            ).exists():
-                raise ValidationError(
-                    {'Вы уже подписаны на этого пользователя.'}
-                )
-            Follow.objects.create(
-                author=author,
-                user=request.user
             )
-
+            if not created:
+                raise ValidationError(
+                    'Вы уже подписаны на этого пользователя.'
+                )
             user_serializer = UserWithRecipesSerializer(
                 author,
                 context={'request': request}
             )
-
             user_data = user_serializer.data
             user_data['recipes'] = user_serializer.get_recipes(author)
-
             return Response(user_data, status=status.HTTP_201_CREATED)
-        try:
-            follow = Follow.objects.get(author=author, user=request.user)
-            follow.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Follow.DoesNotExist:
-            raise ValidationError({'Подписка не найдена.'})
+
+        follow = get_object_or_404(Follow, author=author, user=request.user)
+        follow.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -180,7 +165,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def handle_cart_or_favorite(request, model, recipe):
         """Обработчик для добавления/удаления в избранное или корзину"""
         if request.method == 'POST':
-            obj, created = model.objects.get_or_create(
+            _, created = model.objects.get_or_create(
                 user=request.user, recipe=recipe
             )
             if created:
@@ -190,17 +175,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 return Response(
                     serializer.data, status=status.HTTP_201_CREATED
                 )
-            raise ValidationError({'Рецепт уже добавлен.'})
+            raise ValidationError('Рецепт уже добавлен.')
 
         elif request.method == 'DELETE':
-            try:
-                instance = get_object_or_404(
-                    model, user=request.user, recipe=recipe
-                )
-                instance.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            except Http404:
-                raise ValidationError({'Рецепт не найден в корзине.'})
+            instance = get_object_or_404(
+                model, user=request.user, recipe=recipe
+            )
+            instance.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         methods=['post', 'delete'],
@@ -223,8 +205,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['GET'], url_path='get-link')
     def get_link(self, request, pk):
         """Получаем короткую ссылку."""
-        recipe = get_object_or_404(Recipe, id=pk)
-        short_link = request.build_absolute_uri(f'/s/{recipe.id}/')
+        if not Recipe.objects.filter(id=pk).exists():
+            raise Http404("Рецепт не найден")
+
+        short_link = request.build_absolute_uri(
+            reverse('redirect_short_link', args=[pk])
+        )
         return Response(
             {'short-link': short_link},
             status=status.HTTP_200_OK
@@ -260,29 +246,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
             ))
             for ingredient in cart
         ]
+
         recipe_ids = ShoppingCart.objects.filter(
             user=request.user
         ).values_list('recipe_id', flat=True).distinct()
-
         recipes = set(Recipe.objects.filter(
             id__in=recipe_ids
         ).values_list(
             'name', flat=True
         ))
+        shopping_list = format_shopping_list(ingredients_info, recipes)
 
-        shopping_list = '\n'.join([
-            'Список ингредиентов:',
-            *ingredients_info,
-            'Список рецептов:',
-            *[f'• {recipe}' for recipe in recipes]
-        ])
+        with tempfile.NamedTemporaryFile(
+            delete=False, mode='w', encoding='utf-8'
+        ) as temp_file:
+            temp_file.write(shopping_list)
+            temp_file.flush()
 
-        response = HttpResponse(
-            shopping_list,
-            content_type='text/plain; charset=utf-8'
-        )
-        response['Content-Disposition'] = (
-            'attachment; filename=\'shopping_cart.txt\''
+        response = FileResponse(
+            open(temp_file.name, 'rb'),
+            as_attachment=True,
+            filename='shopping_cart.txt'
         )
 
         return response

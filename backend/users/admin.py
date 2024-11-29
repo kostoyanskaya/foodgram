@@ -19,41 +19,35 @@ class UserAdmin(BaseUserAdmin):
     )
     search_fields = ('username', 'email')
 
-    def full_name(self, obj):
+    @admin.display(description='ФИО')
+    def full_name(self, user):
         """Возвращает ФИО пользователя."""
-        return f'{obj.first_name} {obj.last_name}'
-
-    full_name.short_description = 'ФИО'
+        return f'{user.first_name} {user.last_name}'
 
     @mark_safe
-    def show_avatar(self, obj):
+    def show_avatar(self, user):
         """Возвращает HTML-разметку аватара."""
-        if obj.avatar:
+        if user.avatar:
             return (
-                f'<img src=\'{obj.avatar.url}\' '
+                f'<img src=\'{user.avatar.url}\' '
                 f'width=\'50\' height=\'50\' />'
             )
         return 'Нет аватара'
 
-    show_avatar.short_description = 'Аватар'
-
-    def get_recipes_count(self, obj):
+    @admin.display(description='Количество рецептов')
+    def get_recipes_count(self, user):
         """Возвращает количество рецептов пользователя."""
-        return obj.recipes.count()
+        return user.recipes.count()
 
-    get_recipes_count.short_description = 'Количество рецептов'
-
-    def get_subscriptions_count(self, obj):
+    @admin.display(description='Количество подписок')
+    def get_subscriptions_count(self, user):
         """Возвращает количество подписок."""
-        return obj.followings.count()
+        return user.authors.count()
 
-    get_subscriptions_count.short_description = 'Количество подписок'
-
-    def get_followers_count(self, obj):
+    @admin.display(description='Количество подписчиков')
+    def get_followers_count(self, user):
         """Возвращает количество подписчиков."""
-        return obj.followers.count()
-
-    get_followers_count.short_description = 'Количество подписчиков'
+        return user.followers.count()
 
 
 @admin.register(Follow)

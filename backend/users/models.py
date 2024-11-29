@@ -6,14 +6,11 @@ from django.db.models import UniqueConstraint
 
 
 class User(AbstractUser):
-
-    username_validator = UnicodeUsernameValidator()
-
     username = models.CharField(
         verbose_name='Логин',
         unique=True,
         max_length=150,
-        validators=[username_validator]
+        validators=[UnicodeUsernameValidator()]
     )
     email = models.EmailField(
         verbose_name='Электронная почта',
@@ -54,7 +51,7 @@ class Follow(models.Model):
         User,
         verbose_name='На кого подписан',
         on_delete=models.CASCADE,
-        related_name='followings'
+        related_name='authors'
     )
 
     class Meta:

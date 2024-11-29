@@ -1,13 +1,12 @@
 import base64
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
 from django.core.files.base import ContentFile
 from djoser.serializers import UserSerializer as BaseUserSerializer
 from rest_framework import serializers
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 
-from .constants import MIN_AMOUNT
+from recipes.constants import MIN_AMOUNT
 from recipes.models import (
     Favorite,
     Ingredient,
@@ -179,14 +178,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         tags_data = validated_data.pop('tags')
         user = self.context.get('request').user
-
-        if isinstance(user, AnonymousUser):
-            raise serializers.ValidationError(
-                'Вы должны войти в систему, чтобы создать рецепт'
-            )
-        validated_data['author'] = user
-
-        recipe = super().create(validated_data)
+        recipe = super().create({**validated_data, 'author': user})
         recipe.tags.set(tags_data)
 
         self._bulk_create_ingredients(recipe, ingredients_data)
@@ -194,16 +186,12 @@ class RecipeSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        if instance.author != self.context.get('request').user:
-            raise PermissionDenied('Только автор рецепта может его обновить.')
         ingredients_data = validated_data.pop('ingredients_in_recipes', [])
         tags_data = validated_data.pop('tags', [])
 
         self.validate_ingredients(ingredients_data)
-        if not tags_data:
-            raise serializers.ValidationError(
-                'Поле tags не должно быть пустым.'
-            )
+        self.validate_tags(tags_data)
+
         instance.tags.clear()
         instance.tags.set(tags_data)
         IngredientInRecipe.objects.filter(recipe=instance).delete()

@@ -91,12 +91,18 @@ sudo docker compose -f docker-compose.production.yml exec backend python manage.
 sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic
 sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/backend_static/static/. /backend_static/static/
 ```
-10. Загрузить ингредиенты:
+10. Загрузить ингредиенты из csv:
 
 ```
 docker exec -it <имя_контейнера> bash
 python manage.py import_ingredients
 python manage.py import_tags
+```
+Загрузить ингредиенты из json:
+```
+
+python manage.py data_import_ingredients
+python manage.py data_import_tags
 ```
 
 ## Автор
