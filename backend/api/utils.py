@@ -1,4 +1,13 @@
-def format_shopping_list(ingredients_info, recipes):
+def format_shopping_list(cart, recipes):
+    ingredients_info = [
+        '{} - {} ({})'.format(
+            ingredient['ingredient_name'].capitalize(),
+            ingredient['total_amount'],
+            ingredient['ingredient_unit']
+        )
+        for ingredient in cart
+    ]
+
     shopping_list = '\n'.join([
         'Список ингредиентов:',
         *ingredients_info,

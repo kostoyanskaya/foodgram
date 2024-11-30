@@ -34,17 +34,17 @@ class UserAdmin(BaseUserAdmin):
             )
         return 'Нет аватара'
 
-    @admin.display(description='Количество рецептов')
+    @admin.display(description='Рецепты')
     def get_recipes_count(self, user):
         """Возвращает количество рецептов пользователя."""
         return user.recipes.count()
 
-    @admin.display(description='Количество подписок')
+    @admin.display(description='Подписки')
     def get_subscriptions_count(self, user):
         """Возвращает количество подписок."""
         return user.authors.count()
 
-    @admin.display(description='Количество подписчиков')
+    @admin.display(description='Подписчики')
     def get_followers_count(self, user):
         """Возвращает количество подписчиков."""
         return user.followers.count()

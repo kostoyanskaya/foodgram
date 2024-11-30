@@ -145,6 +145,9 @@ class RecipeSerializer(serializers.ModelSerializer):
             'ingredients'
         )
 
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if not request.user.is_authenticated:
@@ -175,12 +178,9 @@ class RecipeSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients_in_recipes')
         self.validate_ingredients(ingredients_data)
-
         tags_data = validated_data.pop('tags')
-        user = self.context.get('request').user
-        recipe = super().create({**validated_data, 'author': user})
+        recipe = super().create(validated_data)
         recipe.tags.set(tags_data)
-
         self._bulk_create_ingredients(recipe, ingredients_data)
 
         return recipe

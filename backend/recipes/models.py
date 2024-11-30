@@ -1,9 +1,11 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from django.contrib.auth import get_user_model
 
 from .constants import MIN_AMOUNT, MIN_COOKING_TIME
-from users.models import User
+
+User = get_user_model()
 
 
 class Tag(models.Model):
@@ -95,20 +97,21 @@ class BaseUserRecipeModel(models.Model):
         User,
         on_delete=models.CASCADE,
         verbose_name='Пользователь',
-        related_name='%(class)s'
+        related_name='%(class)s_set'
     )
     recipe = models.ForeignKey(
         'Recipe',
         on_delete=models.CASCADE,
         verbose_name='Рецепт',
-        related_name='%(class)s'
+        related_name='%(class)s_set'
     )
 
     class Meta:
         abstract = True
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'recipe'], name='unique_user_recipe_base'
+                fields=['user', 'recipe'],
+                name='unique_recipe_in_%(class)s_set'
             )
         ]
 
@@ -120,24 +123,12 @@ class ShoppingCart(BaseUserRecipeModel):
     class Meta(BaseUserRecipeModel.Meta):
         verbose_name = 'Список покупок'
         verbose_name_plural = 'Списки покупок'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'recipe'],
-                name='unique_user_recipe_shopping_cart'
-            )
-        ]
 
 
 class Favorite(BaseUserRecipeModel):
     class Meta(BaseUserRecipeModel.Meta):
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранные'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'recipe'],
-                name='unique_user_recipe_favorite'
-            )
-        ]
 
 
 class IngredientInRecipe(models.Model):

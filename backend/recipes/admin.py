@@ -20,7 +20,7 @@ class IngredientInRecipeInline(admin.TabularInline):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'name', 'cooking_time', 'author_username',
+        'id', 'name', 'cooking_time', 'author',
         'tags_list', 'favorites_count', 'product_list',
         'show_image'
     )
@@ -28,10 +28,6 @@ class RecipeAdmin(admin.ModelAdmin):
     search_fields = ('name', 'author__username')
     list_filter = ('author', 'tags')
     inlines = [IngredientInRecipeInline]
-
-    @admin.display(description='Автор')
-    def author_username(self, recipe):
-        return recipe.author.username
 
     @admin.display(description='Изображение')
     @mark_safe
@@ -43,14 +39,14 @@ class RecipeAdmin(admin.ModelAdmin):
             )
         return 'Нет изображения'
 
-    @admin.display(description='Количество в избранном')
+    @admin.display(description='Избранное')
     def favorites_count(self, recipe):
         return recipe.favorite.count()
 
     @admin.display(description='Теги')
     @mark_safe
     def tags_list(self, recipe):
-        return ', '.join(tag.name for tag in recipe.tags.all())
+        return '<br>'.join(tag.name for tag in recipe.tags.all())
 
     @admin.display(description='Продукты')
     @mark_safe
@@ -68,7 +64,7 @@ class TagAdmin(admin.ModelAdmin):
     list_display_links = ('name',)
     search_fields = ('name',)
 
-    @admin.display(description='Количество рецептов')
+    @admin.display(description='Рецепты')
     def recipe_count(self, tag):
         return tag.recipes.count()
 
@@ -83,7 +79,7 @@ class IngredientAdmin(admin.ModelAdmin):
     list_display = ('name', 'measurement_unit', 'recipes_count')
     list_filter = ('measurement_unit',)
 
-    @admin.display(description='Количество рецептов')
+    @admin.display(description='Рецепты')
     def recipes_count(self, ingredient):
         return ingredient.recipes.count()
 

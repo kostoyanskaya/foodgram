@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import F, Sum
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import FileResponse, Http404
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -34,7 +34,6 @@ from recipes.models import (
     Tag
 )
 from users.models import Follow
-import tempfile
 
 
 User = get_user_model()
@@ -116,7 +115,7 @@ class UserViewSet(DjoserUserViewSet):
                 raise ValidationError(
                     'Вы не можете подписаться на самого себя.'
                 )
-            follow, created = Follow.objects.get_or_create(
+            _, created = Follow.objects.get_or_create(
                 author=author, user=request.user
             )
             if not created:
@@ -160,6 +159,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     pagination_class = LimitPagination
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
     @staticmethod
     def handle_cart_or_favorite(request, model, recipe):
@@ -206,7 +208,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request, pk):
         """Получаем короткую ссылку."""
         if not Recipe.objects.filter(id=pk).exists():
-            raise Http404("Рецепт не найден")
+            raise ValidationError(f"Рецепт с id {pk} не найден.")
 
         short_link = request.build_absolute_uri(
             reverse('redirect_short_link', args=[pk])
@@ -237,16 +239,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'ingredient_name',
             'ingredient_unit'
         ).annotate(total_amount=Sum('amount')).order_by('ingredient_name')
-
-        ingredients_info = [
-            ('{} - {} ({})'.format(
-                ingredient['ingredient_name'].capitalize(),
-                ingredient['total_amount'],
-                ingredient['ingredient_unit']
-            ))
-            for ingredient in cart
-        ]
-
         recipe_ids = ShoppingCart.objects.filter(
             user=request.user
         ).values_list('recipe_id', flat=True).distinct()
@@ -255,16 +247,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ).values_list(
             'name', flat=True
         ))
-        shopping_list = format_shopping_list(ingredients_info, recipes)
-
-        with tempfile.NamedTemporaryFile(
-            delete=False, mode='w', encoding='utf-8'
-        ) as temp_file:
-            temp_file.write(shopping_list)
-            temp_file.flush()
-
+        shopping_list = format_shopping_list(cart, recipes)
         response = FileResponse(
-            open(temp_file.name, 'rb'),
+            shopping_list,
             as_attachment=True,
             filename='shopping_cart.txt'
         )
