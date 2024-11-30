@@ -2,7 +2,7 @@ from .data_import_base import BaseImportCommand
 from recipes.models import Ingredient
 
 
-class IngredientImportCommand(BaseImportCommand):
+class Command(BaseImportCommand):
     help = 'Import ingredients from JSON file'
 
     def handle(self, *args, **kwargs):

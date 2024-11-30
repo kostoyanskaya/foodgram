@@ -4,7 +4,7 @@ from .data_import_base import BaseImportCommand
 from recipes.models import Tag
 
 
-class TagImportCommand(BaseImportCommand):
+class Command(BaseImportCommand):
     help = 'Import tags from JSON file'
 
     def handle(self, *args, **kwargs):
