@@ -165,7 +165,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @staticmethod
     def handle_cart_or_favorite(request, model, recipe):
-        """Обработчик для добавления/удаления в избранное или корзину"""
+        """Обработчик для добавления/удаления в избранное или корзину."""
         if request.method == 'POST':
             _, created = model.objects.get_or_create(
                 user=request.user, recipe=recipe
