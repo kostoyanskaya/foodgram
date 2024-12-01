@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.models import Group
 from django.utils.html import mark_safe
 
 from .models import (
@@ -9,6 +10,8 @@ from .models import (
     ShoppingCart,
     Tag,
 )
+
+admin.site.unregister(Group)
 
 
 class IngredientInRecipeInline(admin.TabularInline):
@@ -41,7 +44,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
     @admin.display(description='Избранное')
     def favorites_count(self, recipe):
-        return recipe.favorite.count()
+        return recipe.favorites.count()
 
     @admin.display(description='Теги')
     @mark_safe
@@ -78,6 +81,7 @@ class FavoriteAdmin(admin.ModelAdmin):
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ('name', 'measurement_unit', 'recipes_count')
     list_filter = ('measurement_unit',)
+    search_fields = ('name', 'measurement_unit',)
 
     @admin.display(description='Рецепты')
     def recipes_count(self, ingredient):

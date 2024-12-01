@@ -239,14 +239,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'ingredient_name',
             'ingredient_unit'
         ).annotate(total_amount=Sum('amount')).order_by('ingredient_name')
-        recipe_ids = ShoppingCart.objects.filter(
-            user=request.user
-        ).values_list('recipe_id', flat=True).distinct()
-        recipes = set(Recipe.objects.filter(
-            id__in=recipe_ids
-        ).values_list(
-            'name', flat=True
-        ))
+        recipes = Recipe.objects.filter(
+            shopping_carts__user=request.user
+        ).distinct()
         shopping_list = format_shopping_list(cart, recipes)
         response = FileResponse(
             shopping_list,

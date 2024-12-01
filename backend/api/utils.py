@@ -1,11 +1,12 @@
 def format_shopping_list(cart, recipes):
     ingredients_info = [
-        '{} - {} ({})'.format(
+        '{}. {} - {} ({})'.format(
+            index + 1,
             ingredient['ingredient_name'].capitalize(),
             ingredient['total_amount'],
             ingredient['ingredient_unit']
         )
-        for ingredient in cart
+        for index, ingredient in enumerate(cart)
     ]
 
     shopping_list = '\n'.join([
