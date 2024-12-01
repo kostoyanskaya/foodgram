@@ -60,7 +60,7 @@ class Recipe(models.Model):
                 MIN_COOKING_TIME, f'Минимальное время {MIN_COOKING_TIME} мин.'
             ),
         ),
-        verbose_name='Время приготовления - мин.'
+        verbose_name='Время (мин)'
     )
     image = models.ImageField(upload_to='recipes/', verbose_name='Изображение')
     tags = models.ManyToManyField(
@@ -155,3 +155,6 @@ class IngredientInRecipe(models.Model):
         default_related_name = 'ingredients_in_recipes'
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецепте'
+
+    def __str__(self):
+        return f'{self.recipe} - {self.ingredient.name}'

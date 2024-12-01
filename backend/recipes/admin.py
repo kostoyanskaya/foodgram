@@ -17,7 +17,13 @@ admin.site.unregister(Group)
 class IngredientInRecipeInline(admin.TabularInline):
     model = IngredientInRecipe
     min_num = 1
-    extra = 1
+    extra = 0
+    fields = ('ingredient', 'amount', 'measurement_unit_display')
+    readonly_fields = ('measurement_unit_display',)
+
+    @admin.display(description='Единица измерения')
+    def measurement_unit_display(self, instance):
+        return instance.ingredient.measurement_unit
 
 
 @admin.register(Recipe)
