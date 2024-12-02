@@ -9,6 +9,7 @@ from .models import (
     Recipe,
     ShoppingCart,
     Tag,
+    IngredientInRecipe,
 )
 
 admin.site.unregister(Group)
@@ -64,6 +65,23 @@ class RecipeAdmin(admin.ModelAdmin):
             f'{ingredient.ingredient.name} '
             f'({ingredient.amount} {ingredient.ingredient.measurement_unit})'
             for ingredient in recipe.ingredients_in_recipes.all()
+        )
+
+    def formfield_for_manytomany(self, db_field, http_request, **kwargs):
+        if db_field.name == 'ingredients':
+            if http_request.resolver_match.func.__name__ == 'change_view':
+                recipe_id = http_request.resolver_match.kwargs.get('object_id')
+                if recipe_id:
+                    recipe_instance = self.get_object(http_request, recipe_id)
+                    kwargs['queryset'] = Ingredient.objects.filter(
+                        recipes=recipe_instance
+                    )
+                else:
+                    kwargs['queryset'] = Ingredient.objects.none()
+            else:
+                kwargs['queryset'] = Ingredient.objects.all()
+        return super().formfield_for_manytomany(
+            db_field, http_request, **kwargs
         )
 
 
