@@ -109,4 +109,4 @@ python manage.py data_import_tags
 ```
 
 ## Автор
-#### [_Анастасия_](https://github.com/kostoyanskaya/)
+#### [_Виктория_](https://github.com/kostoyanskaya/)
