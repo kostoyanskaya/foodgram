@@ -1,7 +1,5 @@
 #  Проект: Foodgram
 «Фудграм» — это веб-сайт, где пользователи могут публиковать свои рецепты, добавлять чужие рецепты в избранное и подписываться на публикации других авторов. Зарегистрированным пользователям также доступен сервис «Список покупок», который позволяет создавать список продуктов, необходимых для приготовления выбранных блюд. «Фудграм» создаёт удобное пространство для обмена рецептами и планирования покупок, делая процесс приготовления пищи более структурированным и приятным.
-# Ссылка на проект: 
-#### [_https://foodgramdelicious.ddnsking.com_](https://foodgramdelicious.ddnsking.com)
 
 [![Main Foodgram Workflow](https://github.com/kostoyanskaya/foodgram/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/kostoyanskaya/foodgram/actions/workflows/main.yml)
 
