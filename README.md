@@ -1,34 +1,34 @@
-#  Проект: Foodgram
-«Фудграм» — это веб-сайт, где пользователи могут публиковать свои рецепты, добавлять чужие рецепты в избранное и подписываться на публикации других авторов. Зарегистрированным пользователям также доступен сервис «Список покупок», который позволяет создавать список продуктов, необходимых для приготовления выбранных блюд. «Фудграм» создаёт удобное пространство для обмена рецептами и планирования покупок, делая процесс приготовления пищи более структурированным и приятным.
+# Project: Foodgram
+"Foodgram" is a website where users can publish their recipes, add other people's recipes to favorites, and subscribe to other authors' publications. Registered users also have access to the "Shopping List" service, which allows creating a list of products needed to prepare selected dishes. "Foodgram" creates a convenient space for sharing recipes and planning purchases, making the cooking process more structured and enjoyable.
 
 [![Main Foodgram Workflow](https://github.com/kostoyanskaya/foodgram/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/kostoyanskaya/foodgram/actions/workflows/main.yml)
 
-### Основные возможности:
-- Пользователи могут публиковать свои рецепты.
-- Возможность добавления чужих рецептов в избранное.
-- Подписка на публикации других авторов.
-- Сервис «Список покупок» для создания списка необходимых продуктов.
-- Автоматическая переадресация на страницу входа после регистрации.
-- Возможность получения уникальной короткой ссылки на рецепт.
-- Залогиненные пользователи могут добавлять рецепты в избранное и список покупок.
-- Пользователи могут скачивать свой список покупок в формате .txt.
-- Редактирование опубликованных рецептов для их авторов.
+### Main features:
+- Users can publish their recipes.
+- Ability to add other people's recipes to favorites.
+- Subscribe to other authors' publications.
+- "Shopping List" service for creating a list of necessary products.
+- Automatic redirection to the login page after registration.
+- Ability to get a unique short link to a recipe.
+- Logged-in users can add recipes to favorites and the shopping list.
+- Users can download their shopping list in .txt format.
+- Editing published recipes for their authors.
 
 
-### В проекте используются  основные следующие технологии и библиотеки:
+### The project mainly uses the following technologies and libraries:
 
-- Django - основной фреймворк для разработки веб-приложений.
-- Django REST Framework - для построения API.
-- Djoser - для управления аутентификацией и регистрацией пользователей.
-- Pillow - библиотека для обработки изображений.
-- PostgreSQL - в качестве базы данных.
-- Gunicorn - WSGI HTTP сервер для запуска приложения.
+- Django - the main framework for web application development.
+- Django REST Framework - for building the API.
+- Djoser - for managing user authentication and registration.
+- Pillow - a library for image processing.
+- PostgreSQL - as the database.
+- Gunicorn - WSGI HTTP server for running the application.
 
-## Установка проекта на удаленном сервере:
+## Installing the project on a remote server:
 
-1. Выполнить вход на удаленный сервер.
+1. Log in to the remote server.
 
-2. Выполните на сервере команды для установки Docker и Docker Compose для Linux
+2. Run the commands on the server to install Docker and Docker Compose for Linux
 
 ```
 sudo apt update
@@ -38,33 +38,32 @@ sudo sh ./get-docker.sh
 sudo apt install docker-compose-plugin 
 ```
 
-3. Создайте папку foodgram
+3. Create the foodgram folder
 
 ```
 sudo mkdir foodgram
 ```
 
-4. Переход в директорию foodgram
+4. Navigate to the foodgram directory
 
 ```
 cd foodgram/
 ```
 
-5. Нужно создать фаил docker-compose.production.yml и скопировать  содержимое 
-docker-compose.production.yml проекта
+5. You need to create a docker-compose.production.yml file and copy the contents of the project's docker-compose.production.yml
 
 ```
 sudo touch docker-compose.production.yml
 sudo nano docker-compose.production.yml
 ```
 
-6. Нужно создать фаил .env
+6. You need to create a .env file
 
 ```
 sudo touch .env
 sudo nano .env
 ```
-7. Заполнить по примеру
+7. Fill it out according to the example
 
 ```
 POSTGRES_DB=example
@@ -75,14 +74,14 @@ DB_HOST=db
 DB_PORT=5432
 ```
 
-8. Добавить домен сайта в файл конфигурации Nginx и проверить конфигурацию, выполнить перезагрузку.
+8. Add the site domain to the Nginx configuration file, check the configuration, and reload it.
 ```
 sudo nano /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo service nginx reload
 ```
 
-9. Выполнить команды:
+9. Run the commands:
 
 ```
 sudo docker compose -f docker-compose.production.yml pull
@@ -92,19 +91,19 @@ sudo docker compose -f docker-compose.production.yml exec backend python manage.
 sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic
 sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/backend_static/static/. /backend_static/static/
 ```
-10. Загрузить ингредиенты из csv:
+10. Load ingredients from csv:
 
 ```
-docker exec -it <имя_контейнера> bash
+docker exec -it <container_name> bash
 python manage.py import_ingredients
 python manage.py import_tags
 ```
-Загрузить ингредиенты из json:
+Load ingredients from json:
 ```
 
 python manage.py data_import_ingredients
 python manage.py data_import_tags
 ```
 
-## Автор
-#### [_Виктория_](https://github.com/kostoyanskaya/)
+## Author
+#### [_Viktoriia_](https://github.com/kostoyanskaya/)
