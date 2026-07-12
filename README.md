@@ -17,7 +17,7 @@
 
 ### The project mainly uses the following technologies and libraries:
 
-- Django - the main framework for web application development.
+- Django - the main framework for web application development
 - Django REST Framework - for building the API.
 - Djoser - for managing user authentication and registration.
 - Pillow - a library for image processing.
